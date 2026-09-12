@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
@@ -27,9 +28,9 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _isLoading = false;
       });
+
       if (authProvider.isAuthenticated) {
-        Navigator.pushReplacement(
-          context,
+        Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
         );
       } else {
@@ -43,19 +44,13 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _loginGoogle() {
-    // Para entornos móviles/web, podemos abrir la URL de autenticación de Google de NestJS
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Conectando con ${ApiConstants.baseUrl}/auth/google...'),
-        action: SnackBarAction(
-          label: 'Modo Demo',
-          onPressed: _loginDemo,
-        ),
-      ),
-    );
-    // Para simplificar la prueba inmediata en cualquier entorno, también activamos el login demo
-    _loginDemo();
+  void _loginGoogle() async {
+    final Uri url = Uri.parse('${ApiConstants.baseUrl}/auth/google');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir la página de Google')),
+      );
+    }
   }
 
   @override
