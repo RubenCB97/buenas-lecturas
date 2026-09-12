@@ -7,7 +7,7 @@ RUN flutter pub get
 
 COPY . .
 # Compilar para web
-RUN flutter build web --release
+RUN flutter build web --release --dart-define=API_URL=https://buenas-lecturas.costacode.es/api
 
 # Etapa 2: Servidor Nginx
 FROM nginx:alpine
