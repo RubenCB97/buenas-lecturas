@@ -1,0 +1,17 @@
+{
+  "name": "buenas-lecturas",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@angular/cli": "^21.2.12",
+    "@ionic/cli": "^7.2.1",
+    "@nestjs/cli": "^11.0.21"
+  }
+}

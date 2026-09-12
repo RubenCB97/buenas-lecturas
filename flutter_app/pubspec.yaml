@@ -1,0 +1,29 @@
+name: buenas_lecturas_app
+description: "BuenasLecturas - Una moderna y elegante aplicación de libros estilo Goodreads construida con Flutter."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  provider: ^6.1.2
+  http: ^1.2.1
+  shared_preferences: ^2.2.3
+  intl: ^0.19.0
+  flutter_rating_bar: ^4.0.1
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  image_picker: ^1.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
