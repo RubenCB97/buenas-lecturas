@@ -46,7 +46,7 @@ services:
       - dokploy-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.buenaslecturas.rule=Host(`buenas-lecturas.ruben.jairocosta.es`)"
+      - "traefik.http.routers.buenaslecturas.rule=Host(`buenas-lecturas.costacode.es`)"
       - "traefik.http.routers.buenaslecturas.entrypoints=websecure"
       - "traefik.http.routers.buenaslecturas.tls.certresolver=letsencrypt"
       - "traefik.http.services.buenaslecturas.loadbalancer.server.port=80"
