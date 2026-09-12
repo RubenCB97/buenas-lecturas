@@ -7,6 +7,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: buenas_lecturas
+    networks:
+      - app-network
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -17,7 +19,7 @@ services:
     container_name: buenas-lecturas-backend
     restart: always
     environment:
-      DATABASE_HOST: db
+      DATABASE_HOST: buenas-lecturas-db
       DATABASE_PORT: 5432
       DATABASE_USER: postgres
       DATABASE_PASSWORD: password
@@ -30,6 +32,8 @@ services:
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY}
     depends_on:
       - db
+    networks:
+      - app-network
     volumes:
       - backend_uploads:/app/uploads
 
@@ -42,7 +46,7 @@ services:
     depends_on:
       - backend
     networks:
-      - default
+      - app-network
       - dokploy-network
     labels:
       - "traefik.enable=true"
@@ -59,5 +63,5 @@ volumes:
 networks:
   dokploy-network:
     external: true
-  default:
+  app-network:
     driver: bridge
