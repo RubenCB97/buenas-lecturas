@@ -39,11 +39,25 @@ services:
       dockerfile: Dockerfile
     container_name: buenas-lecturas-frontend
     restart: always
-    ports:
-      - "8081:80"
     depends_on:
       - backend
+    networks:
+      - default
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.buenaslecturas.rule=Host(`buenas-lecturas.ruben.jairocosta.es`)"
+      - "traefik.http.routers.buenaslecturas.entrypoints=websecure"
+      - "traefik.http.routers.buenaslecturas.tls.certresolver=letsencrypt"
+      - "traefik.http.services.buenaslecturas.loadbalancer.server.port=80"
+      - "traefik.docker.network=dokploy-network"
 
 volumes:
   postgres_data:
   backend_uploads:
+
+networks:
+  dokploy-network:
+    external: true
+  default:
+    driver: bridge
