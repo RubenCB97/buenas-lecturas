@@ -1,0 +1,63 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Detalle del libro</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="detail-container" *ngIf="book">
+    <div class="header-section" style="text-align: center;">
+      <img [src]="book.thumbnail || book.book?.thumbnail" class="cover-image" style="width: 150px; border-radius: 8px;" />
+      <h1>{{ book.title || book.book?.title }}</h1>
+      <h2 *ngIf="(book.subtitle || book.book?.subtitle)" style="color: #666; font-size: 1.1rem;">{{ book.subtitle || book.book?.subtitle }}</h2>
+      <p class="author" style="font-weight: 500;">{{ book.authors || book.book?.authors }}</p>
+
+      <ion-button [color]="isInLibrary ? 'danger' : 'primary'" (click)="toggleLibrary()" expand="block" style="margin: 15px 0;">
+        {{ isInLibrary ? 'Eliminar de mi Biblioteca' : 'Añadir a mi Biblioteca' }}
+      </ion-button>
+
+      <div class="meta-info" style="display: flex; justify-content: center; gap: 15px; margin: 15px 0;">
+        <span *ngIf="(book.averageRating || book.book?.averageRating)">⭐ {{ book.averageRating || book.book?.averageRating }}</span>
+        <span *ngIf="(book.pageCount || book.book?.pageCount)">{{ book.pageCount || book.book?.pageCount }} páginas</span>
+      </div>
+    </div>
+    <ion-item>
+      <ion-label>Estado</ion-label>
+      <ion-select [(ngModel)]="status" (ionChange)="updateStatus()">
+        <ion-select-option value="WANT_TO_READ">Quiero leer</ion-select-option>
+        <ion-select-option value="READING">Leyendo</ion-select-option>
+        <ion-select-option value="READ">Leído</ion-select-option>
+      </ion-select>
+    </ion-item>
+
+    <ion-item>
+      <ion-label>Tu puntuación</ion-label>
+      <div class="rating-stars">
+        <ion-icon *ngFor="let i of [1,2,3,4,5]" 
+                  [name]="i <= rating ? 'star' : 'star-outline'" 
+                  [color]="i <= rating ? 'warning' : 'medium'"
+                  (click)="setRating(i)">
+        </ion-icon>
+      </div>
+    </ion-item>
+
+
+    <div class="description" style="margin-top: 20px;">
+      <h3>Sinopsis</h3>
+      <p>{{ book.description || book.book?.description }}</p>
+    </div>
+
+    <div class="extra-info" style="margin-top: 20px; color: #888; font-size: 0.9rem;">
+      <p *ngIf="(book.publisher || book.book?.publisher)"><strong>Editorial:</strong> {{ book.publisher || book.book?.publisher }}</p>
+      <p *ngIf="(book.publishedDate || book.book?.publishedDate)"><strong>Fecha:</strong> {{ book.publishedDate || book.book?.publishedDate }}</p>
+      <p *ngIf="(book.categories || book.book?.categories)"><strong>Géneros:</strong> {{ book.categories || book.book?.categories }}</p>
+      <p *ngIf="(book.language || book.book?.language)"><strong>Idioma:</strong> {{ book.language || book.book?.language }}</p>
+      <p *ngIf="(book.isbn || book.book?.isbn)"><strong>ISBN:</strong> {{ book.isbn || book.book?.isbn }}</p>
+      <p *ngIf="(book.asin || book.book?.asin)"><strong>ASIN:</strong> {{ book.asin || book.book?.asin }}</p>
+      <p *ngIf="(book.awards || book.book?.awards)"><strong>Premios:</strong> {{ book.awards || book.book?.awards }}</p>
+    </div>
+  </div>
+</ion-content>

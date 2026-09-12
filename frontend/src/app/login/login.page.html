@@ -1,0 +1,24 @@
+<ion-content [fullscreen]="true">
+  <div class="login-container">
+    <div class="brand-section">
+      <h1 class="brand-title">BuenasLecturas</h1>
+      <p class="brand-tagline">Tu biblioteca personal, moderna y compartida.</p>
+    </div>
+
+    <div class="illustration-container">
+      <!-- Aquí podrías poner un SVG minimalista de un libro -->
+      <div class="book-icon">📚</div>
+    </div>
+
+    <div class="actions-section">
+      <ion-button expand="block" fill="outline" class="google-button" (click)="loginWithGoogle()">
+        <ion-icon slot="start" name="logo-google"></ion-icon>
+        Continuar con Google
+      </ion-button>
+      
+      <p class="terms-text">
+        Al continuar, aceptas nuestros <span>Términos y Condiciones</span>.
+      </p>
+    </div>
+  </div>
+</ion-content>

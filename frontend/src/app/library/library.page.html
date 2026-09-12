@@ -1,0 +1,32 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-title>Mi Biblioteca</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="ion-padding">
+  <div *ngIf="myBooks.length === 0" class="empty-state">
+    <p>Aún no has guardado ningún libro.</p>
+  </div>
+
+  <ion-list>
+    <ion-item-sliding *ngFor="let item of myBooks">
+      <ion-item button (click)="openDetail(item)">
+        <ion-thumbnail slot="start">
+          <img [src]="item.book.thumbnail" />
+        </ion-thumbnail>
+        <ion-label>
+          <h2>{{ item.book.title }}</h2>
+          <p>{{ item.book.authors }}</p>
+          <ion-badge color="primary">{{ item.status }}</ion-badge>
+        </ion-label>
+      </ion-item>
+
+      <ion-item-options side="end">
+        <ion-item-option color="danger" (click)="remove(item.book.id)">
+          <ion-icon slot="icon-only" name="trash"></ion-icon>
+        </ion-item-option>
+      </ion-item-options>
+    </ion-item-sliding>
+  </ion-list>
+</ion-content>

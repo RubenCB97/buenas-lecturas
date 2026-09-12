@@ -1,0 +1,88 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-title>Explorar</ion-title>
+    <ion-buttons slot="end">
+      <ion-button routerLink="/library">
+        <ion-icon name="library"></ion-icon>
+      </ion-button>
+      <ion-button routerLink="/tabs/profile">
+        <ion-avatar class="user-avatar">
+          <img [src]="user?.picture || 'https://ionicframework.com/docs/img/demos/avatar.svg'" />
+        </ion-avatar>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-searchbar 
+      placeholder="Busca títulos, autores o ISBN..." 
+      (ionInput)="onSearch($event)"
+      class="custom-searchbar"
+      [debounce]="500">
+    </ion-searchbar>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="feed-container">
+    <div class="welcome-section" *ngIf="!searchQuery">
+      <h2>Hola, {{ user?.firstName || 'Lector' }} 👋</h2>
+      <p>Descubre tu próxima gran historia.</p>
+    </div>
+
+    <div *ngIf="trendingBooks.length > 0 && !searchQuery">
+      <div class="section-header">
+        <h3>Tendencias</h3>
+      </div>
+
+      <div class="horizontal-scroll">
+        <div class="book-card-mini" *ngFor="let book of trendingBooks" (click)="openDetail(book)">
+          <div class="book-cover-placeholder">
+            <img [src]="book.thumbnail" *ngIf="book.thumbnail" />
+            <ion-icon name="book-outline" *ngIf="!book.thumbnail"></ion-icon>
+          </div>
+          <div class="book-info">
+            <h4>{{ book.title }}</h4>
+            <p>{{ book.authors[0] }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <h3>{{ searchQuery ? 'Resultados de búsqueda' : 'Para ti' }}</h3>
+    </div>
+
+    <div class="main-feed">
+      <ion-card class="book-card-large ion-activatable" *ngFor="let book of recommendedBooks" (click)="openDetail(book)">
+        <ion-ripple-effect></ion-ripple-effect>
+        <div class="card-content-wrapper">
+          <div class="book-cover-large">
+             <img [src]="book.thumbnail" *ngIf="book.thumbnail" />
+             <ion-icon name="image-outline" *ngIf="!book.thumbnail"></ion-icon>
+          </div>
+          <div class="book-details-large">
+            <ion-badge color="light" *ngIf="book.categories">{{ book.categories[0] }}</ion-badge>
+            <h2>{{ book.title }}</h2>
+            <p class="author">{{ book.authors.join(', ') }}</p>
+            <p class="description">{{ book.description }}</p>
+            <div class="card-footer">
+              <div class="rating" *ngIf="book.averageRating">
+                <ion-icon name="star" color="warning"></ion-icon>
+                <span>{{ book.averageRating }}</span>
+              </div>
+              <ion-button fill="clear" size="small" (click)="$event.stopPropagation(); toggleLibrary(book)">
+                <ion-icon slot="icon-only" [name]="isInLibrary(book) ? 'bookmark' : 'bookmark-outline'" [color]="isInLibrary(book) ? 'primary' : 'medium'"></ion-icon>
+              </ion-button>
+            </div>
+          </div>
+        </div>
+      </ion-card>
+    </div>
+  </div>
+
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button color="dark">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>

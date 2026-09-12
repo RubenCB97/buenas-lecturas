@@ -1,0 +1,82 @@
+ion-content {
+  --background: #ffffff;
+}
+
+.login-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.brand-section {
+  margin-top: 20px;
+
+  .brand-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+
+  .brand-tagline {
+    font-size: 1.1rem;
+    color: #666;
+    margin: 0;
+  }
+}
+
+.illustration-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
+
+  .book-icon {
+    font-size: 80px;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.1));
+    animation: float 3s ease-in-out infinite;
+  }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+  100% { transform: translateY(0px); }
+}
+
+.actions-section {
+  width: 100%;
+  margin-bottom: 20px;
+
+  .google-button {
+    --border-radius: 12px;
+    --border-width: 1px;
+    --border-color: #e0e0e0;
+    --color: #333;
+    font-weight: 600;
+    height: 56px;
+    margin-bottom: 24px;
+    text-transform: none;
+    letter-spacing: 0;
+    
+    ion-icon {
+      font-size: 20px;
+      color: #4285F4;
+    }
+  }
+
+  .terms-text {
+    font-size: 0.85rem;
+    color: #999;
+    
+    span {
+      color: #333;
+      font-weight: 500;
+      text-decoration: underline;
+    }
+  }
+}
