@@ -6,6 +6,7 @@ import { Activity } from './entities/activity.entity';
 import { BooksService } from '../books/books.service';
 import { Book } from '../books/entities/book.entity';
 import { User } from '../users/entities/user.entity';
+import { computeReadingStats, ReadingStats } from './reading-stats';
 
 @Injectable()
 export class UserBooksService {
@@ -194,6 +195,15 @@ export class UserBooksService {
       this.logger.error(`Error deleting book: ${error.message}`);
       throw error;
     }
+  }
+
+  /** Estadísticas detalladas de lectura de un año (pantalla Estadísticas). */
+  async getDetailedStats(userId: number, year?: number): Promise<ReadingStats> {
+    const library = await this.userBooksRepository.find({
+      where: { user: { id: userId } },
+      relations: { book: true },
+    });
+    return computeReadingStats(library as any, year ?? new Date().getFullYear());
   }
 
   // Estadísticas agregadas del año en curso para "Mi Año Literario"

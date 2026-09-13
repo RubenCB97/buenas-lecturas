@@ -14,6 +14,7 @@ import '../social/shelves_screen.dart';
 import '../import/export_library_tile.dart';
 import '../import/goodreads_import_screen.dart';
 import 'avatar_picker_sheet.dart';
+import 'reading_stats_screen.dart';
 import 'edit_profile_sheet.dart';
 import 'theme_settings_sheet.dart';
 import 'year_in_review_screen.dart';
@@ -504,6 +505,22 @@ class ProfileScreen extends StatelessWidget {
             ),
 
             const SizedBox(height: 10),
+            Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                leading: const Icon(Icons.insights_rounded, color: AppTheme.primary),
+                title: const Text('Estadísticas de lectura',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                subtitle: const Text('Páginas por mes, géneros, autores y ritmo',
+                    style: TextStyle(fontSize: 12)),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ReadingStatsScreen()),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             Card(
               margin: EdgeInsets.zero,
               child: ListTile(

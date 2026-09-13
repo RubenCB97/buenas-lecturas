@@ -28,6 +28,12 @@ export class UserBooksController {
     return this.userBooksService.getUserActivities(req.user.id);
   }
 
+  @Get('stats/detailed')
+  async getDetailedStats(@Req() req, @Query('year') year?: string) {
+    const parsed = year ? parseInt(year, 10) : NaN;
+    return this.userBooksService.getDetailedStats(req.user.id, Number.isFinite(parsed) ? parsed : undefined);
+  }
+
   @Get('stats/year')
   async getYearStats(@Req() req, @Query('year') year?: string) {
     return this.userBooksService.getYearStats(req.user.id, year ? +year : undefined);
