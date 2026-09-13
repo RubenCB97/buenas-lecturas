@@ -21,10 +21,35 @@ describe('CoverRecognitionService', () => {
     expect(CoverRecognitionService.sniffMime(Buffer.from('hola mundo, no soy imagen'))).toBeNull();
   });
 
-  it('sin clave de API el servicio queda desactivado', () => {
-    const prev = process.env.ANTHROPIC_API_KEY;
+  it('se activa con clave de Gemini o de Claude', () => {
+    const prev = { g: process.env.GEMINI_API_KEY, a: process.env.ANTHROPIC_API_KEY };
+    delete process.env.GEMINI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
-    expect(new CoverRecognitionService({} as any).isEnabled).toBe(false);
-    if (prev !== undefined) process.env.ANTHROPIC_API_KEY = prev;
+    const service = new CoverRecognitionService({} as any);
+    expect(service.isEnabled).toBe(false);
+    process.env.GEMINI_API_KEY = 'x';
+    expect(service.isEnabled).toBe(true);
+    delete process.env.GEMINI_API_KEY;
+    if (prev.g !== undefined) process.env.GEMINI_API_KEY = prev.g;
+    if (prev.a !== undefined) process.env.ANTHROPIC_API_KEY = prev.a;
+  });
+
+  it('extrae el texto de una respuesta de Gemini', () => {
+    const body = {
+      status: 'completed',
+      steps: [
+        { type: 'thought', content: [{ type: 'text', text: 'ignorar' }] },
+        { type: 'model_output', content: [{ type: 'text', text: '{"isBook":true,' }, { type: 'text', text: '"title":"Dune"}' }] },
+      ],
+    };
+    expect(CoverRecognitionService.extractGeminiText(body)).toBe('{"isBook":true,"title":"Dune"}');
+    expect(CoverRecognitionService.extractGeminiText({ steps: [] })).toBeNull();
+  });
+
+  it('interpreta la lectura aunque venga entre bloques de código', () => {
+    expect(
+      CoverRecognitionService.parseReading('```json\n{"isBook":true,"title":" Dune ","authors":["Frank Herbert",""],"isbn":null}\n```'),
+    ).toEqual({ isBook: true, title: 'Dune', authors: ['Frank Herbert'], isbn: null });
+    expect(CoverRecognitionService.parseReading('no es json').isBook).toBe(false);
   });
 });
