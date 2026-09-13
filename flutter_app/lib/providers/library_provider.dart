@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/network/api_client.dart';
 import '../models/book_model.dart';
 import '../models/user_book_model.dart';
@@ -16,6 +18,11 @@ class LibraryProvider extends ChangeNotifier {
   LibrarySort _currentSort = LibrarySort.recent;
   String _searchQuery = '';
   bool _isGridView = false;
+  bool _isOffline = false;
+  DateTime? _cachedAt;
+
+  static const String _cacheKey = 'library_cache_v1';
+  static const String _cacheTimeKey = 'library_cache_time_v1';
 
   List<UserBookModel> get libraryBooks => _libraryBooks;
   bool get isLoading => _isLoading;
@@ -24,6 +31,12 @@ class LibraryProvider extends ChangeNotifier {
   LibrarySort get currentSort => _currentSort;
   String get searchQuery => _searchQuery;
   bool get isGridView => _isGridView;
+
+  /// Sin conexión con el servidor: mostramos la última copia guardada.
+  bool get isOffline => _isOffline;
+
+  /// Cuándo se guardó la copia que se está mostrando sin conexión.
+  DateTime? get cachedAt => _cachedAt;
 
   // Filtrado y ordenación
   List<UserBookModel> get filteredBooks {
@@ -146,10 +159,12 @@ class LibraryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Cargar biblioteca desde el backend NestJS
+  // Cargar biblioteca desde el backend NestJS. Si no hay conexión se usa la
+  // última copia guardada en el dispositivo (solo lectura).
   Future<void> fetchLibrary() async {
     _isLoading = true;
     _errorMessage = null;
+    if (_libraryBooks.isEmpty) await _loadCache();
     notifyListeners();
 
     try {
@@ -157,7 +172,13 @@ class LibraryProvider extends ChangeNotifier {
       if (response.success && response.data != null && response.data is List) {
         final list = response.data as List;
         _libraryBooks = list.map((item) => UserBookModel.fromJson(item)).toList();
+        _isOffline = false;
+        _saveCache(list);
+      } else if (response.statusCode == null || response.statusCode! >= 502) {
+        // Ni siquiera hubo respuesta: estamos sin red o el servidor no responde
+        _isOffline = true;
       } else {
+        _isOffline = false;
         _errorMessage = response.errorMessage;
       }
     } catch (e) {
@@ -166,6 +187,39 @@ class LibraryProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _loadCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_cacheKey);
+      if (raw == null) return;
+      final list = jsonDecode(raw) as List;
+      _libraryBooks = list.map((item) => UserBookModel.fromJson(item)).toList();
+      final time = prefs.getInt(_cacheTimeKey);
+      _cachedAt = time == null ? null : DateTime.fromMillisecondsSinceEpoch(time);
+    } catch (_) {
+      // Copia corrupta o de un formato antiguo: la ignoramos
+    }
+  }
+
+  Future<void> _saveCache(List raw) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now();
+      await prefs.setString(_cacheKey, jsonEncode(raw));
+      await prefs.setInt(_cacheTimeKey, now.millisecondsSinceEpoch);
+      _cachedAt = now;
+    } catch (_) {
+      // Sin espacio o almacenamiento no disponible: no es crítico
+    }
+  }
+
+  /// Borra la copia local (al cerrar sesión, para no mostrarla a otra cuenta).
+  static Future<void> clearCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_cacheKey);
+    await prefs.remove(_cacheTimeKey);
   }
 
   // Añadir libro a la biblioteca

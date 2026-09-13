@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/network/api_client.dart';
 import '../models/user_model.dart';
+import 'library_provider.dart';
 
 class AuthProvider extends ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
@@ -192,6 +193,7 @@ class AuthProvider extends ChangeNotifier {
     _currentUser = null;
     _errorMessage = null;
     await _apiClient.removeToken();
+    await LibraryProvider.clearCache();
     notifyListeners();
   }
 }

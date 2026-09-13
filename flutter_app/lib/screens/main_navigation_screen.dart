@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/network/api_client.dart';
@@ -29,8 +30,50 @@ class MainNavigationScreen extends StatefulWidget {
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
+/// Aviso de que no hay conexión y se muestra la copia guardada.
+class _OfflineBanner extends StatelessWidget {
+  final LibraryProvider provider;
+
+  const _OfflineBanner({required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    final cachedAt = provider.cachedAt;
+    final when = cachedAt == null
+        ? ''
+        : ' del ${cachedAt.day}/${cachedAt.month} a las ${cachedAt.hour}:${cachedAt.minute.toString().padLeft(2, '0')}';
+    return Material(
+      color: const Color(0xFF475569),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
+          child: Row(
+            children: [
+              const Icon(Icons.cloud_off_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Sin conexión · ves tu biblioteca guardada$when. Los cambios no se guardarán.',
+                  style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                ),
+              ),
+              TextButton(
+                onPressed: provider.isLoading ? null : provider.fetchLibrary,
+                style: TextButton.styleFrom(foregroundColor: Colors.white),
+                child: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+  Timer? _reconnectTimer;
 
   final List<Widget> _screens = const [
     ExploreScreen(),
@@ -49,6 +92,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       Provider.of<SocialProvider>(context, listen: false).fetchRecommendations();
       Provider.of<NotificationsProvider>(context, listen: false).startPolling();
       _openLinkedBook();
+    });
+    // Sin conexión, reintentamos solos cada cierto tiempo
+    _reconnectTimer = Timer.periodic(const Duration(seconds: 45), (_) {
+      if (!mounted) return;
+      final library = Provider.of<LibraryProvider>(context, listen: false);
+      if (library.isOffline && !library.isLoading) library.fetchLibrary();
     });
   }
 
@@ -70,6 +119,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   void dispose() {
+    _reconnectTimer?.cancel();
     Provider.of<NotificationsProvider>(context, listen: false).stopPolling();
     super.dispose();
   }
@@ -83,9 +133,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final pendingBadges = friendsProvider.pendingCount + socialProvider.unseenRecommendations;
 
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: Column(
+        children: [
+          if (libraryProvider.isOffline) _OfflineBanner(provider: libraryProvider),
+          Expanded(
+            child: MediaQuery.removePadding(
+              context: context,
+              removeTop: libraryProvider.isOffline,
+              child: IndexedStack(
+                index: _currentIndex,
+                children: _screens,
+              ),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
