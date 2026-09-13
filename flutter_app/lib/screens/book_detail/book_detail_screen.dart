@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/book_share.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../models/book_model.dart';
 import '../../models/user_book_model.dart';
@@ -215,13 +216,13 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
               }
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Enlace copiado al portapapeles')),
-              );
-            },
+          // Builder para que el menú nativo se ancle a este botón (iPad)
+          Builder(
+            builder: (buttonContext) => IconButton(
+              tooltip: 'Compartir libro',
+              icon: const Icon(Icons.share_outlined),
+              onPressed: () => BookShare.showOptions(buttonContext, widget.book),
+            ),
           ),
         ],
       ),
