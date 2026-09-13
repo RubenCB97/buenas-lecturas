@@ -140,7 +140,13 @@ export class GroupsService {
     const ranking = members.map(m => {
       const ub = userBooks.find(u => u.user.id === m.user.id);
       const cp = ub?.currentPage ?? 0;
-      const pct = total > 0 ? Math.min(1, cp / total) : (ub?.status === 'READ' ? 1 : (ub?.status === 'READING' ? 0.3 : 0));
+      // Progreso real: terminado = 100%; sin páginas registradas = 0%.
+      // Antes se inventaba un 30% para quien estuviera "leyendo" sin datos.
+      // Sin total conocido estimamos 300 págs, igual que la app, para que el
+      // porcentaje del club coincida con el que ve cada lector.
+      const pct = ub?.status === 'READ'
+        ? 1
+        : (cp > 0 ? Math.min(1, cp / (total > 0 ? total : 300)) : 0);
       return {
         user: m.user,
         role: m.role,

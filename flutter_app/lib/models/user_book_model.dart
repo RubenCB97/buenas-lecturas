@@ -71,14 +71,17 @@ class UserBookModel {
     this.updatedAt,
   });
 
+  /// Progreso real de lectura entre 0 y 1.
+  ///
+  /// Sin páginas leídas es 0%: no inventamos un mínimo para que la barra
+  /// "no se vea vacía". Si el libro no tiene total de páginas conocido se usa
+  /// la misma estimación que la hoja de actualizar progreso, para que el
+  /// porcentaje coincida con lo que el usuario vio al guardarlo.
   double get progressPercentage {
-    final totalPages = book.pageCount;
-    if (totalPages == null || totalPages <= 0) {
-      return status == ReadingStatus.read ? 1.0 : (status == ReadingStatus.reading ? 0.4 : 0.0);
-    }
     if (status == ReadingStatus.read) return 1.0;
-    if (currentPage == null || currentPage == 0) return 0.05;
-    return (currentPage! / totalPages).clamp(0.0, 1.0);
+    final pages = currentPage ?? 0;
+    if (pages <= 0) return 0.0;
+    return (pages / book.effectivePageCount).clamp(0.0, 1.0);
   }
 
   factory UserBookModel.fromJson(Map<String, dynamic> json) {

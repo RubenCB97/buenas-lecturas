@@ -115,7 +115,8 @@ class LibraryProvider extends ChangeNotifier {
       if (b.status == ReadingStatus.read) {
         total += pages;
       } else if (b.status == ReadingStatus.reading) {
-        total += b.currentPage ?? (pages * 0.4).round();
+        // Solo contamos lo realmente registrado, sin estimar un avance
+        total += b.currentPage ?? 0;
       }
     }
     return total;

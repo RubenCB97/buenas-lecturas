@@ -345,8 +345,8 @@ class BookCard extends StatelessWidget {
                     if (status == ReadingStatus.reading) ...[
                       const SizedBox(height: 8),
                       ReadingProgressBar(
-                        progress: userBook?.progressPercentage ?? 0.4,
-                        currentPage: userBook?.currentPage ?? 120,
+                        progress: userBook?.progressPercentage ?? 0.0,
+                        currentPage: userBook?.currentPage ?? 0,
                         totalPages: book.effectivePageCount,
                         height: 5,
                       ),

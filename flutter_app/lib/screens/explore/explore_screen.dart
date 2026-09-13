@@ -441,7 +441,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                       const SizedBox(height: 8),
                                       ReadingProgressBar(
                                         progress: currentlyReading.progressPercentage,
-                                        currentPage: currentlyReading.currentPage ?? 120,
+                                        currentPage: currentlyReading.currentPage ?? 0,
                                         totalPages: currentlyReading.book.effectivePageCount,
                                         height: 5,
                                       ),
