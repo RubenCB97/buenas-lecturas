@@ -1,11 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
-export class SearchService {
+export class SearchService implements OnModuleInit {
   private readonly logger = new Logger(SearchService.name);
+
+  /** Las tendencias cambian poco: 30 min de caché es de sobra. */
+  private static readonly TRENDING_TTL_MS = 30 * 60 * 1000;
+  /** Tiempo máximo por llamada a Open Library antes de abandonarla. */
+  private static readonly OPEN_LIBRARY_TIMEOUT_MS = 10_000;
+
+  private readonly trendingCache = new Map<string, { books: any[]; fetchedAt: number }>();
+  private readonly trendingInFlight = new Map<string, Promise<any[]>>();
 
   constructor(
     private readonly httpService: HttpService,
@@ -198,6 +206,8 @@ export class SearchService {
           'User-Agent': 'BuenasLecturas/1.0 (contacto@buenaslecturas.app)',
           Accept: 'application/json',
         },
+        // Sin esto una consulta colgada bloquea la respuesta indefinidamente
+        signal: AbortSignal.timeout(SearchService.OPEN_LIBRARY_TIMEOUT_MS),
       });
       if (!res.ok) {
         this.logger.warn(`Open Library respondió ${res.status} para ${url}`);
@@ -226,12 +236,62 @@ export class SearchService {
     region: 'ES' | 'GLOBAL' = 'ES',
     period: 'daily' | 'weekly' | 'monthly' | 'yearly' = 'weekly',
   ) {
-    const limit = 24;
+    const key = `${region}:${period}`;
+    const cached = this.trendingCache.get(key);
+    const now = Date.now();
 
-    if (region === 'GLOBAL') {
-      return this.trendingGlobal(period, limit);
+    if (cached) {
+      // Stale-while-revalidate: si está caducado devolvemos igualmente lo que
+      // hay y refrescamos en segundo plano. Open Library tarda 3-5 s por
+      // consulta y no queremos que el usuario espere al cambiar de pestaña.
+      if (now - cached.fetchedAt > SearchService.TRENDING_TTL_MS) {
+        void this.refreshTrending(region, period);
+      }
+      return cached.books;
     }
-    return this.trendingForES(period, limit);
+
+    // Primera vez: esperamos al cálculo (compartido si ya hay uno en curso)
+    return this.refreshTrending(region, period);
+  }
+
+  /**
+   * Recalcula las tendencias y actualiza la caché. Si ya hay un cálculo en
+   * marcha para la misma clave, se reutiliza en vez de lanzar otro.
+   */
+  private refreshTrending(region: 'ES' | 'GLOBAL', period: 'daily' | 'weekly' | 'monthly' | 'yearly'): Promise<any[]> {
+    const key = `${region}:${period}`;
+    const running = this.trendingInFlight.get(key);
+    if (running) return running;
+
+    const limit = 24;
+    const task = (region === 'GLOBAL' ? this.trendingGlobal(period, limit) : this.trendingForES(period, limit))
+      .then(books => {
+        // No machacamos una caché buena con un resultado vacío por un fallo puntual
+        if (books.length > 0 || !this.trendingCache.has(key)) {
+          this.trendingCache.set(key, { books, fetchedAt: Date.now() });
+        }
+        return books.length > 0 ? books : (this.trendingCache.get(key)?.books ?? []);
+      })
+      .catch(e => {
+        this.logger.warn(`Error calculando tendencias ${key}: ${e.message}`);
+        return this.trendingCache.get(key)?.books ?? [];
+      })
+      .finally(() => this.trendingInFlight.delete(key));
+
+    this.trendingInFlight.set(key, task);
+    return task;
+  }
+
+  /** Precalcula las dos regiones al arrancar y las refresca periódicamente. */
+  onModuleInit() {
+    const warm = () => {
+      void this.refreshTrending('ES', 'weekly');
+      void this.refreshTrending('GLOBAL', 'weekly');
+    };
+    warm();
+    const timer = setInterval(warm, SearchService.TRENDING_TTL_MS);
+    // No impedimos que el proceso termine por este temporizador
+    timer.unref?.();
   }
 
   /**
@@ -298,10 +358,15 @@ export class SearchService {
     const collected: any[] = [];
     const seen = new Set<string>();
 
-    for (const q of queries) {
-      const data = await this.fetchOpenLibrary(
-        `https://openlibrary.org/search.json?q=${q}&sort=readinglog&limit=40&fields=${fields}`,
-      );
+    // Las tres consultas en paralelo: en serie sumaban 12-15 s.
+    const responses = await Promise.all(
+      queries.map(q =>
+        this.fetchOpenLibrary(`https://openlibrary.org/search.json?q=${q}&sort=readinglog&limit=40&fields=${fields}`),
+      ),
+    );
+
+    // Se procesan en orden de prioridad (primero lo específico de España)
+    for (const data of responses) {
       if (!data?.docs?.length) continue;
 
       for (const doc of data.docs) {

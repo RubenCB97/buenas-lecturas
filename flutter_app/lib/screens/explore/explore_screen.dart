@@ -91,7 +91,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           color: AppTheme.primary,
           onRefresh: () async {
             await Future.wait([
-              exploreProvider.fetchTrending(),
+              exploreProvider.fetchTrending(force: true),
               exploreProvider.fetchRecommended(),
               exploreProvider.fetchNewReleases(),
               libraryProvider.fetchLibrary(),

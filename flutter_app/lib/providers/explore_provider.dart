@@ -6,12 +6,15 @@ import '../models/book_model.dart';
 class ExploreProvider extends ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
 
-  List<BookModel> _trendingBooks = [];
+  // Tendencias cacheadas por "región:periodo". Así cambiar de España a
+  // Mundial es instantáneo si ya se cargó, y una respuesta lenta de una región
+  // nunca pisa la lista de la otra (antes provocaba listas cruzadas o vacías).
+  final Map<String, List<BookModel>> _trendingCache = {};
+  final Set<String> _trendingLoading = {};
   List<BookModel> _recommendedBooks = [];
   List<BookModel> _newReleases = [];
   List<BookModel> _searchResults = [];
 
-  bool _isLoadingTrending = false;
   bool _isLoadingRecommended = false;
   bool _isLoadingNewReleases = false;
   bool _isSearching = false;
@@ -23,11 +26,12 @@ class ExploreProvider extends ChangeNotifier {
   String _selectedCategory = 'Todos';
   Timer? _debounceTimer;
 
-  List<BookModel> get trendingBooks => _trendingBooks;
+  String get _trendingKey => '$_trendingRegion:$_trendingPeriod';
+  List<BookModel> get trendingBooks => _trendingCache[_trendingKey] ?? const [];
   List<BookModel> get recommendedBooks => _recommendedBooks;
   List<BookModel> get newReleases => _newReleases;
   List<BookModel> get searchResults => _searchResults;
-  bool get isLoadingTrending => _isLoadingTrending;
+  bool get isLoadingTrending => _trendingLoading.contains(_trendingKey);
   bool get isLoadingRecommended => _isLoadingRecommended;
   bool get isLoadingNewReleases => _isLoadingNewReleases;
   bool get isSearching => _isSearching;
@@ -52,7 +56,9 @@ class ExploreProvider extends ChangeNotifier {
   }
 
   Future<void> initFeed() async {
-    fetchTrending();
+    // Precargamos las dos regiones: al cambiar de pestaña ya estarán listas
+    fetchTrending(region: 'ES');
+    fetchTrending(region: 'GLOBAL');
     fetchRecommended();
     fetchNewReleases();
   }
@@ -94,34 +100,39 @@ class ExploreProvider extends ChangeNotifier {
   }
 
   /// Tendencias reales basadas en actividad de lectores (Open Library),
-  /// segmentadas por mercado: 'ES' (español) o 'US' (inglés).
-  Future<void> fetchTrending({String? region}) async {
-    if (region != null && region != _trendingRegion) {
-      _trendingRegion = region;
-    }
-    _isLoadingTrending = true;
+  /// segmentadas por mercado: 'ES' (español) o 'GLOBAL' (mundial).
+  Future<void> fetchTrending({String? region, bool force = false}) async {
+    final key = '${region ?? _trendingRegion}:$_trendingPeriod';
+    final targetRegion = region ?? _trendingRegion;
+
+    // Ya hay una petición en curso para esta clave: no duplicamos
+    if (_trendingLoading.contains(key)) return;
+    // Si ya la tenemos y no se pide refresco explícito, no hacemos nada
+    if (!force && (_trendingCache[key]?.isNotEmpty ?? false)) return;
+
+    _trendingLoading.add(key);
     notifyListeners();
 
     try {
       final response = await _apiClient.get('/search/trending', queryParams: {
-        'region': _trendingRegion,
+        'region': targetRegion,
         'period': _trendingPeriod,
       });
       if (response.success && response.data is List && (response.data as List).isNotEmpty) {
-        final list = response.data as List;
-        _trendingBooks = list.map((item) => BookModel.fromJson(item)).toList();
-      } else {
-        _trendingBooks = [];
+        _trendingCache[key] =
+            (response.data as List).map((item) => BookModel.fromJson(item)).toList();
       }
+      // Si falla, conservamos lo que hubiera en caché en vez de vaciar la lista
     } catch (_) {
-      // Sin conexión al backend: dejar lista vacía
+      // Sin conexión: mantenemos la caché
     } finally {
-      _isLoadingTrending = false;
+      _trendingLoading.remove(key);
       notifyListeners();
     }
   }
 
-  /// Cambia el mercado de las tendencias y recarga.
+  /// Cambia el mercado de las tendencias. Si ya está en caché el cambio es
+  /// inmediato; si no, se carga mostrando el indicador.
   Future<void> setTrendingRegion(String region) async {
     if (region == _trendingRegion) return;
     _trendingRegion = region;
@@ -200,7 +211,7 @@ class ExploreProvider extends ChangeNotifier {
         _searchResults = list.map((item) => BookModel.fromJson(item)).toList();
       } else {
         // Búsqueda en catálogo local
-        final all = [..._trendingBooks, ..._recommendedBooks];
+        final all = [...trendingBooks, ..._recommendedBooks];
         _searchResults = all.where((b) => 
           b.title.toLowerCase().contains(query.toLowerCase()) || 
           b.authors.any((a) => a.toLowerCase().contains(query.toLowerCase()))
