@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/book_share.dart';
 import '../../core/utils/date_formatter.dart';
+import '../../core/utils/series.dart';
 import '../../models/book_model.dart';
 import '../../models/user_book_model.dart';
 import '../../providers/auth_provider.dart';
@@ -15,6 +16,7 @@ import '../../widgets/rating_stars.dart';
 import '../../widgets/reading_progress_bar.dart';
 import '../author/author_screen.dart';
 import '../challenges/add_to_challenge_sheet.dart';
+import '../library/series_screen.dart';
 import '../social/add_quote_sheet.dart';
 import '../social/pick_shelf_sheet.dart';
 import '../social/recommend_sheet.dart';
@@ -276,6 +278,19 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                   ],
                   const SizedBox(height: 6),
                   _buildAuthorLinks(),
+                  if (Series.parse(widget.book.title) case final series?)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: ActionChip(
+                        avatar: const Icon(Icons.collections_bookmark_rounded, size: 16, color: AppTheme.primary),
+                        label: Text('Libro #${series.numberLabel} de «${series.name}»',
+                            style: const TextStyle(fontSize: 12.5)),
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => SeriesScreen(highlight: series.name)),
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,

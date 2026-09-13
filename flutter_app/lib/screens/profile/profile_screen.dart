@@ -12,6 +12,7 @@ import '../book_detail/book_detail_screen.dart';
 import '../../providers/theme_provider.dart';
 import '../social/shelves_screen.dart';
 import '../import/export_library_tile.dart';
+import '../library/series_screen.dart';
 import '../import/goodreads_import_screen.dart';
 import 'avatar_picker_sheet.dart';
 import 'reading_stats_screen.dart';
@@ -517,6 +518,20 @@ class ProfileScreen extends StatelessWidget {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const ReadingStatsScreen()),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                leading: const Icon(Icons.collections_bookmark_rounded, color: AppTheme.primary),
+                title: const Text('Mis sagas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                subtitle: const Text('En qué libro vas y cuál es el siguiente', style: TextStyle(fontSize: 12)),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SeriesScreen()),
                 ),
               ),
             ),
