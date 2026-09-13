@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart' show ImageSource;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/isbn.dart';
 import '../../models/book_model.dart';
 import '../book_detail/book_detail_screen.dart';
+import 'cover_recognition.dart';
 
 /// Escanea el código de barras (ISBN) de un libro y abre su ficha.
 class IsbnScannerScreen extends StatefulWidget {
@@ -24,6 +26,27 @@ class _IsbnScannerScreenState extends State<IsbnScannerScreen> {
 
   bool _busy = false;
   String? _hint;
+  bool _coverEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    CoverRecognition.isEnabled().then((enabled) {
+      if (mounted) setState(() => _coverEnabled = enabled);
+    });
+  }
+
+  /// Sin código de barras a mano: reconocer el libro por la portada.
+  Future<void> _recognizeCover() async {
+    setState(() => _busy = true);
+    // Liberamos la cámara para que pueda usarla el selector de fotos
+    await _controller.stop();
+    if (!mounted) return;
+    await CoverRecognition.start(context);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    await _controller.start();
+  }
 
   @override
   void dispose() {
@@ -185,6 +208,15 @@ class _IsbnScannerScreenState extends State<IsbnScannerScreen> {
             label: const Text('Escribir el ISBN a mano'),
             onPressed: _enterManually,
           ),
+          if (_coverEnabled) ...[
+            const SizedBox(height: 8),
+            TextButton.icon(
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+              icon: const Icon(Icons.photo_library_rounded),
+              label: const Text('Elegir una foto de la portada'),
+              onPressed: () => CoverRecognition.start(context, source: ImageSource.gallery),
+            ),
+          ],
         ],
       ),
     );
@@ -261,13 +293,20 @@ class _IsbnScannerScreenState extends State<IsbnScannerScreen> {
                   const SizedBox(height: 12),
                   if (_busy)
                     const CircularProgressIndicator(color: AppTheme.primary)
-                  else
+                  else ...[
+                    if (_coverEnabled)
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.photo_camera_rounded),
+                        label: const Text('Hacer foto de la portada'),
+                        onPressed: _recognizeCover,
+                      ),
                     TextButton.icon(
                       style: TextButton.styleFrom(foregroundColor: Colors.white),
                       icon: const Icon(Icons.keyboard_rounded),
                       label: const Text('Escribir el ISBN a mano'),
                       onPressed: _enterManually,
                     ),
+                  ],
                 ],
               ),
             ),

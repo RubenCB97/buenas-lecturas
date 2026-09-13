@@ -1,9 +1,52 @@
-import { BadRequestException, Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Query,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { SearchService } from './search.service';
+import { COVER_MIME_TYPES, CoverRecognitionService } from './cover-recognition.service';
 
 @Controller('search')
 export class SearchController {
-  constructor(private readonly searchService: SearchService) {}
+  constructor(
+    private readonly searchService: SearchService,
+    private readonly coverRecognition: CoverRecognitionService,
+  ) {}
+
+  /** Indica a la app si puede ofrecer el reconocimiento por foto. */
+  @Get('cover/enabled')
+  coverEnabled() {
+    return { enabled: this.coverRecognition.isEnabled };
+  }
+
+  /** Reconoce un libro a partir de una foto de la portada (campo `image`). */
+  @Post('cover')
+  @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      // Claude admite imágenes de hasta 5 MB
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async recognizeCover(@UploadedFile() file: Express.Multer.File) {
+    if (!file?.buffer?.length) throw new BadRequestException('No se recibió ninguna imagen');
+    const mime = CoverRecognitionService.sniffMime(file.buffer) ?? file.mimetype;
+    if (!COVER_MIME_TYPES.includes(mime as any)) {
+      throw new BadRequestException('Formato de imagen no soportado (usa JPG, PNG o WebP)');
+    }
+    return this.coverRecognition.recognize(file.buffer, mime);
+  }
 
   @Get()
   async search(@Query('q') query: string) {

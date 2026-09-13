@@ -30,6 +30,7 @@ services:
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:3000/auth/google/callback}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     depends_on:
       - db
     networks:
