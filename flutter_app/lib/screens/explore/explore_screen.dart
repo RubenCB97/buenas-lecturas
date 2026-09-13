@@ -13,6 +13,7 @@ import '../../widgets/book_cover_image.dart';
 import '../../widgets/custom_search_bar.dart';
 import '../../widgets/reading_progress_bar.dart';
 import '../book_detail/book_detail_screen.dart';
+import '../scanner/isbn_scanner_screen.dart';
 import 'new_releases_screen.dart';
 
 /// Ámbito de la búsqueda en Explorar.
@@ -98,7 +99,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ]);
           },
           child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+            physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics()),
             slivers: [
               // Barra superior / Cabecera
               SliverToBoxAdapter(
@@ -112,7 +114,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         children: [
                           Text(
                             'BuenasLecturas',
-                            style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .displayMedium
+                                ?.copyWith(
                                   fontSize: 24,
                                   color: AppTheme.primary,
                                   letterSpacing: -0.5,
@@ -120,10 +125,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            user != null ? 'Hola, ${user.firstName ?? 'Lector'} 👋' : 'Descubre tu próxima lectura',
+                            user != null
+                                ? 'Hola, ${user.firstName ?? 'Lector'} 👋'
+                                : 'Descubre tu próxima lectura',
                             style: TextStyle(
                               fontSize: 14,
-                              color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                              color: isDark
+                                  ? AppTheme.textSecondaryDark
+                                  : AppTheme.textSecondaryLight,
                             ),
                           ),
                         ],
@@ -131,9 +140,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       CircleAvatar(
                         radius: 20,
                         backgroundColor: AppTheme.primaryLight,
-                        backgroundImage: user?.picture != null ? NetworkImage(user!.avatarUrl) : null,
+                        backgroundImage: user?.picture != null
+                            ? NetworkImage(user!.avatarUrl)
+                            : null,
                         child: user?.picture == null
-                            ? const Icon(Icons.person, color: AppTheme.primary, size: 22)
+                            ? const Icon(Icons.person,
+                                color: AppTheme.primary, size: 22)
                             : null,
                       ),
                     ],
@@ -144,26 +156,44 @@ class _ExploreScreenState extends State<ExploreScreen> {
               // Barra de búsqueda con autocompletado
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: CustomSearchBar(
-                    key: ValueKey('search_${_scope.name}'),
-                    placeholder: _scope == SearchScope.books
-                        ? 'Buscar libros por título, autor o tema…'
-                        : 'Buscar autores por nombre…',
-                    onChanged: (query) {
-                      if (_scope == SearchScope.books) {
-                        exploreProvider.onSearchQueryChanged(query);
-                      } else {
-                        authorsProvider.onQueryChanged(query);
-                      }
-                    },
-                    onClear: () {
-                      if (_scope == SearchScope.books) {
-                        exploreProvider.clearSearch();
-                      } else {
-                        authorsProvider.clearSearch();
-                      }
-                    },
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: CustomSearchBar(
+                          key: ValueKey('search_${_scope.name}'),
+                          placeholder: _scope == SearchScope.books
+                              ? 'Buscar libros por título, autor o tema…'
+                              : 'Buscar autores por nombre…',
+                          onChanged: (query) {
+                            if (_scope == SearchScope.books) {
+                              exploreProvider.onSearchQueryChanged(query);
+                            } else {
+                              authorsProvider.onQueryChanged(query);
+                            }
+                          },
+                          onClear: () {
+                            if (_scope == SearchScope.books) {
+                              exploreProvider.clearSearch();
+                            } else {
+                              authorsProvider.clearSearch();
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Escanear el código de barras de un libro
+                      IconButton.filledTonal(
+                        tooltip: 'Escanear libro',
+                        icon: const Icon(Icons.qr_code_scanner_rounded),
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const IsbnScannerScreen()),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -214,49 +244,61 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Autores', style: Theme.of(context).textTheme.titleLarge),
+                        Text('Autores',
+                            style: Theme.of(context).textTheme.titleLarge),
                         if (authorsProvider.isSearching)
                           const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppTheme.primary),
                           )
                         else
                           Text(
                             '${authorsProvider.searchResults.length} encontrados',
                             style: TextStyle(
                               fontSize: 12,
-                              color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                              color: isDark
+                                  ? AppTheme.textSecondaryDark
+                                  : AppTheme.textSecondaryLight,
                             ),
                           ),
                       ],
                     ),
                   ),
                 ),
-                if (authorsProvider.searchResults.isEmpty && !authorsProvider.isSearching)
+                if (authorsProvider.searchResults.isEmpty &&
+                    !authorsProvider.isSearching)
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.all(40),
                       child: Column(
                         children: [
-                          Icon(Icons.person_search_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.5)),
+                          Icon(Icons.person_search_rounded,
+                              size: 48,
+                              color: Colors.grey.withValues(alpha: 0.5)),
                           const SizedBox(height: 12),
                           const Text('No se encontraron autores',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 4),
-                          const Text('Prueba con el nombre completo o parte del apellido',
+                          const Text(
+                              'Prueba con el nombre completo o parte del apellido',
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 13, color: Colors.grey)),
+                              style:
+                                  TextStyle(fontSize: 13, color: Colors.grey)),
                         ],
                       ),
                     ),
                   )
                 else
                   SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (context, index) => AuthorTile(author: authorsProvider.searchResults[index]),
+                        (context, index) => AuthorTile(
+                            author: authorsProvider.searchResults[index]),
                         childCount: authorsProvider.searchResults.length,
                       ),
                     ),
@@ -271,17 +313,22 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     padding: const EdgeInsets.all(40),
                     child: Column(
                       children: [
-                        Icon(Icons.person_search_rounded, size: 54, color: Colors.grey.withValues(alpha: 0.45)),
+                        Icon(Icons.person_search_rounded,
+                            size: 54,
+                            color: Colors.grey.withValues(alpha: 0.45)),
                         const SizedBox(height: 14),
                         const Text('Busca un autor',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 6),
                         Text(
                           'Escribe al menos 2 letras para ver su biografía, obras y nota media.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 13,
-                            color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                            color: isDark
+                                ? AppTheme.textSecondaryDark
+                                : AppTheme.textSecondaryLight,
                           ),
                         ),
                       ],
@@ -291,7 +338,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ],
 
               // Si está buscando libros activamente, mostrar resultados
-              if (_scope == SearchScope.books && exploreProvider.searchQuery.isNotEmpty) ...[
+              if (_scope == SearchScope.books &&
+                  exploreProvider.searchQuery.isNotEmpty) ...[
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -306,31 +354,38 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppTheme.primary),
                           )
                         else
                           Text(
                             '${exploreProvider.searchResults.length} encontrados',
                             style: TextStyle(
                               fontSize: 12,
-                              color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                              color: isDark
+                                  ? AppTheme.textSecondaryDark
+                                  : AppTheme.textSecondaryLight,
                             ),
                           ),
                       ],
                     ),
                   ),
                 ),
-                if (exploreProvider.searchResults.isEmpty && !exploreProvider.isSearching)
+                if (exploreProvider.searchResults.isEmpty &&
+                    !exploreProvider.isSearching)
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.all(40),
                       child: Column(
                         children: [
-                          Icon(Icons.menu_book_outlined, size: 48, color: Colors.grey.withValues(alpha: 0.5)),
+                          Icon(Icons.menu_book_outlined,
+                              size: 48,
+                              color: Colors.grey.withValues(alpha: 0.5)),
                           const SizedBox(height: 12),
                           const Text(
                             'No se encontraron libros',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
                           const Text(
@@ -343,7 +398,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   )
                 else
                   SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
@@ -357,7 +413,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => BookDetailScreen(book: book, heroTag: tag),
+                                  builder: (_) => BookDetailScreen(
+                                      book: book, heroTag: tag),
                                 ),
                               );
                             },
@@ -374,11 +431,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
                       child: Card(
-                        color: isDark ? AppTheme.surfaceDarkSecondary : AppTheme.primaryLight.withValues(alpha: 0.4),
+                        color: isDark
+                            ? AppTheme.surfaceDarkSecondary
+                            : AppTheme.primaryLight.withValues(alpha: 0.4),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                           side: BorderSide(
-                            color: isDark ? AppTheme.borderDark : AppTheme.primary.withValues(alpha: 0.3),
+                            color: isDark
+                                ? AppTheme.borderDark
+                                : AppTheme.primary.withValues(alpha: 0.3),
                           ),
                         ),
                         child: InkWell(
@@ -386,7 +447,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => BookDetailScreen(book: currentlyReading.book),
+                                builder: (_) => BookDetailScreen(
+                                    book: currentlyReading.book),
                               ),
                             );
                           },
@@ -405,11 +467,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Row(
                                         children: [
-                                          Icon(Icons.auto_stories_rounded, size: 14, color: AppTheme.primary),
+                                          Icon(Icons.auto_stories_rounded,
+                                              size: 14,
+                                              color: AppTheme.primary),
                                           SizedBox(width: 4),
                                           Text(
                                             'ACTUALMENTE LEYENDO',
@@ -427,7 +492,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                         currentlyReading.book.title,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                        style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold),
                                       ),
                                       Text(
                                         currentlyReading.book.authorDisplay,
@@ -435,14 +502,19 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                                          color: isDark
+                                              ? AppTheme.textSecondaryDark
+                                              : AppTheme.textSecondaryLight,
                                         ),
                                       ),
                                       const SizedBox(height: 8),
                                       ReadingProgressBar(
-                                        progress: currentlyReading.progressPercentage,
-                                        currentPage: currentlyReading.currentPage ?? 0,
-                                        totalPages: currentlyReading.book.effectivePageCount,
+                                        progress:
+                                            currentlyReading.progressPercentage,
+                                        currentPage:
+                                            currentlyReading.currentPage ?? 0,
+                                        totalPages: currentlyReading
+                                            .book.effectivePageCount,
                                         height: 5,
                                       ),
                                     ],
@@ -470,17 +542,24 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         // Selector España / EEUU
                         Container(
                           decoration: BoxDecoration(
-                            color: isDark ? AppTheme.surfaceDarkSecondary : AppTheme.surfaceLightSecondary,
+                            color: isDark
+                                ? AppTheme.surfaceDarkSecondary
+                                : AppTheme.surfaceLightSecondary,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: isDark ? AppTheme.borderDark : AppTheme.borderLight),
+                            border: Border.all(
+                                color: isDark
+                                    ? AppTheme.borderDark
+                                    : AppTheme.borderLight),
                           ),
                           padding: const EdgeInsets.all(3),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _regionChip(context, exploreProvider, 'ES', '🇪🇸 España'),
+                              _regionChip(context, exploreProvider, 'ES',
+                                  '🇪🇸 España'),
                               const SizedBox(width: 2),
-                              _regionChip(context, exploreProvider, 'GLOBAL', '🌍 Mundial'),
+                              _regionChip(context, exploreProvider, 'GLOBAL',
+                                  '🌍 Mundial'),
                             ],
                           ),
                         ),
@@ -496,7 +575,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       children: [
                         Icon(Icons.trending_up_rounded,
                             size: 13,
-                            color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight),
+                            color: isDark
+                                ? AppTheme.textSecondaryDark
+                                : AppTheme.textSecondaryLight),
                         const SizedBox(width: 5),
                         Expanded(
                           child: Text(
@@ -505,7 +586,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                 : 'Lo más leído esta semana en todo el mundo (Open Library)',
                             style: TextStyle(
                               fontSize: 11.5,
-                              color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                              color: isDark
+                                  ? AppTheme.textSecondaryDark
+                                  : AppTheme.textSecondaryLight,
                             ),
                           ),
                         ),
@@ -517,38 +600,46 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 SliverToBoxAdapter(
                   child: SizedBox(
                     height: 265,
-                    child: exploreProvider.isLoadingTrending && exploreProvider.trendingBooks.isEmpty
-                        ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                    child: exploreProvider.isLoadingTrending &&
+                            exploreProvider.trendingBooks.isEmpty
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                                color: AppTheme.primary))
                         : exploreProvider.trendingBooks.isEmpty
                             ? const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 20),
                                 child: Center(
-                                  child: Text('No hay tendencias disponibles ahora mismo',
+                                  child: Text(
+                                      'No hay tendencias disponibles ahora mismo',
                                       style: TextStyle(color: Colors.grey)),
                                 ),
                               )
                             : ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: exploreProvider.trendingBooks.length,
-                      itemBuilder: (context, index) {
-                        final book = exploreProvider.trendingBooks[index];
-                        final tag = BookCard.heroTagFor('trending', book);
-                        return BookCard(
-                          book: book,
-                          style: BookCardStyle.miniCarousel,
-                          heroTag: tag,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => BookDetailScreen(book: book, heroTag: tag),
+                                scrollDirection: Axis.horizontal,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                itemCount: exploreProvider.trendingBooks.length,
+                                itemBuilder: (context, index) {
+                                  final book =
+                                      exploreProvider.trendingBooks[index];
+                                  final tag =
+                                      BookCard.heroTagFor('trending', book);
+                                  return BookCard(
+                                    book: book,
+                                    style: BookCardStyle.miniCarousel,
+                                    heroTag: tag,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => BookDetailScreen(
+                                              book: book, heroTag: tag),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
                               ),
-                            );
-                          },
-                        );
-                      },
-                    ),
                   ),
                 ),
 
@@ -562,11 +653,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         Flexible(
                           child: Row(
                             children: [
-                              const Icon(Icons.new_releases_rounded, color: AppTheme.primary, size: 20),
+                              const Icon(Icons.new_releases_rounded,
+                                  color: AppTheme.primary, size: 20),
                               const SizedBox(width: 6),
                               Flexible(
                                 child: Text('Novedades ${DateTime.now().year}',
-                                    style: Theme.of(context).textTheme.titleLarge),
+                                    style:
+                                        Theme.of(context).textTheme.titleLarge),
                               ),
                             ],
                           ),
@@ -576,13 +669,17 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             visualDensity: VisualDensity.compact,
                           ),
-                          icon: const Text('Ver todas', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-                          label: const Icon(Icons.arrow_forward_rounded, size: 15),
+                          icon: const Text('Ver todas',
+                              style: TextStyle(
+                                  fontSize: 12.5, fontWeight: FontWeight.w600)),
+                          label:
+                              const Icon(Icons.arrow_forward_rounded, size: 15),
                           onPressed: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const NewReleasesScreen(initialRegion: 'GLOBAL'),
+                                builder: (_) => const NewReleasesScreen(
+                                    initialRegion: 'GLOBAL'),
                               ),
                             );
                           },
@@ -594,19 +691,26 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 SliverToBoxAdapter(
                   child: SizedBox(
                     height: 265,
-                    child: exploreProvider.isLoadingNewReleases && exploreProvider.newReleases.isEmpty
-                        ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                    child: exploreProvider.isLoadingNewReleases &&
+                            exploreProvider.newReleases.isEmpty
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                                color: AppTheme.primary))
                         : exploreProvider.newReleases.isEmpty
                             ? const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 20),
-                                child: Center(child: Text('Sin novedades disponibles', style: TextStyle(color: Colors.grey))),
+                                child: Center(
+                                    child: Text('Sin novedades disponibles',
+                                        style: TextStyle(color: Colors.grey))),
                               )
                             : ListView.builder(
                                 scrollDirection: Axis.horizontal,
-                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
                                 itemCount: exploreProvider.newReleases.length,
                                 itemBuilder: (context, index) {
-                                  final book = exploreProvider.newReleases[index];
+                                  final book =
+                                      exploreProvider.newReleases[index];
                                   final tag = BookCard.heroTagFor('new', book);
                                   return BookCard(
                                     book: book,
@@ -615,7 +719,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                     onTap: () {
                                       Navigator.push(
                                         context,
-                                        MaterialPageRoute(builder: (_) => BookDetailScreen(book: book, heroTag: tag)),
+                                        MaterialPageRoute(
+                                            builder: (_) => BookDetailScreen(
+                                                book: book, heroTag: tag)),
                                       );
                                     },
                                   );
@@ -636,7 +742,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         itemCount: exploreProvider.categories.length,
                         itemBuilder: (context, index) {
                           final cat = exploreProvider.categories[index];
-                          final isSelected = cat == exploreProvider.selectedCategory;
+                          final isSelected =
+                              cat == exploreProvider.selectedCategory;
 
                           return Padding(
                             padding: const EdgeInsets.only(right: 8),
@@ -646,17 +753,25 @@ class _ExploreScreenState extends State<ExploreScreen> {
                               showCheckmark: false,
                               labelStyle: TextStyle(
                                 fontSize: 12.5,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
                                 color: isSelected
                                     ? Colors.white
-                                    : (isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight),
+                                    : (isDark
+                                        ? AppTheme.textPrimaryDark
+                                        : AppTheme.textPrimaryLight),
                               ),
-                              backgroundColor: isDark ? AppTheme.surfaceDarkSecondary : AppTheme.surfaceLightSecondary,
+                              backgroundColor: isDark
+                                  ? AppTheme.surfaceDarkSecondary
+                                  : AppTheme.surfaceLightSecondary,
                               selectedColor: AppTheme.primary,
                               side: BorderSide(
                                 color: isSelected
                                     ? AppTheme.primary
-                                    : (isDark ? AppTheme.borderDark : AppTheme.borderLight),
+                                    : (isDark
+                                        ? AppTheme.borderDark
+                                        : AppTheme.borderLight),
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
@@ -700,7 +815,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => BookDetailScreen(book: book, heroTag: tag),
+                                builder: (_) =>
+                                    BookDetailScreen(book: book, heroTag: tag),
                               ),
                             );
                           },

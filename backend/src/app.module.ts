@@ -17,6 +17,7 @@ import { ChallengesModule } from './challenges/challenges.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AuthorsModule } from './authors/authors.module';
 import { DiscoverModule } from './discover/discover.module';
+import { ImportModule } from './import/import.module';
 
 import { UserBook } from './user-books/entities/user-book.entity';
 import { DetailController } from './detail/detail.controller';
@@ -79,6 +80,7 @@ import { Notification } from './notifications/entities/notification.entity';
     NotificationsModule,
     AuthorsModule,
     DiscoverModule,
+    ImportModule,
   ],
   controllers: [DetailController],
   providers: [DetailService],

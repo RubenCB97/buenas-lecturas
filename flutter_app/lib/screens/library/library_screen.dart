@@ -6,6 +6,8 @@ import '../../providers/library_provider.dart';
 import '../../widgets/book_card.dart';
 import '../../widgets/custom_search_bar.dart';
 import '../book_detail/book_detail_screen.dart';
+import '../import/goodreads_import_screen.dart';
+import '../scanner/isbn_scanner_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -111,6 +113,14 @@ class _LibraryScreenState extends State<LibraryScreen>
       appBar: AppBar(
         title: const Text('Mi Biblioteca'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner_rounded),
+            tooltip: 'Escanear libro',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const IsbnScannerScreen()),
+            ),
+          ),
           IconButton(
             icon: Icon(
               libraryProvider.isGridView
@@ -331,6 +341,23 @@ class _LibraryScreenState extends State<LibraryScreen>
                 color: isDark
                     ? AppTheme.textSecondaryDark
                     : AppTheme.textSecondaryLight,
+              ),
+            ),
+            const SizedBox(height: 20),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.qr_code_scanner_rounded),
+              label: const Text('Escanear un libro'),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const IsbnScannerScreen()),
+              ),
+            ),
+            TextButton.icon(
+              icon: const Icon(Icons.download_rounded),
+              label: const Text('Importar desde Goodreads'),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GoodreadsImportScreen()),
               ),
             ),
           ],

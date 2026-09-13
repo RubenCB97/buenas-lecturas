@@ -726,6 +726,117 @@ export class SearchService implements OnModuleInit {
     return toResult(windows[windows.length - 1]);
   }
 
+  // ---------------------------------------------------------------------------
+  // Búsqueda por ISBN (escáner de código de barras)
+  // ---------------------------------------------------------------------------
+
+  private readonly isbnCache = new Map<string, { value: any | null; fetchedAt: number }>();
+
+  /**
+   * Limpia un ISBN leído o tecleado y comprueba su dígito de control.
+   * Acepta ISBN-10 e ISBN-13 (EAN 978/979). Devuelve `null` si no es válido.
+   */
+  static normalizeIsbn(raw: string): string | null {
+    const clean = String(raw ?? '').toUpperCase().replace(/[^0-9X]/g, '');
+
+    if (/^\d{13}$/.test(clean)) {
+      if (!clean.startsWith('978') && !clean.startsWith('979')) return null;
+      const sum = clean
+        .slice(0, 12)
+        .split('')
+        .reduce((acc, d, i) => acc + Number(d) * (i % 2 === 0 ? 1 : 3), 0);
+      const check = (10 - (sum % 10)) % 10;
+      return check === Number(clean[12]) ? clean : null;
+    }
+
+    if (/^\d{9}[\dX]$/.test(clean)) {
+      const sum = clean
+        .split('')
+        .reduce((acc, d, i) => acc + (d === 'X' ? 10 : Number(d)) * (10 - i), 0);
+      return sum % 11 === 0 ? clean : null;
+    }
+
+    return null;
+  }
+
+  /**
+   * Busca un libro por ISBN combinando Google Books y Open Library: Google
+   * suele tener mejor descripción, pero no encuentra muchos libros españoles
+   * y a veces da 0 páginas o ninguna portada, que Open Library sí tiene.
+   */
+  async lookupByIsbn(isbn: string): Promise<any | null> {
+    const cached = this.isbnCache.get(isbn);
+    if (cached && Date.now() - cached.fetchedAt < 24 * 60 * 60 * 1000) return cached.value;
+
+    const apiKey = this.configService.get<string>('GOOGLE_BOOKS_API_KEY');
+    const fields =
+      'key,title,subtitle,author_name,cover_i,first_publish_year,ratings_average,ratings_count,' +
+      'number_of_pages_median,subject,publisher,language,isbn';
+
+    const [googleRes, olData] = await Promise.all([
+      this.fetchWithRetry(
+        `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}${apiKey ? `&key=${apiKey}` : ''}`,
+        1,
+      ).catch(() => null),
+      this.fetchOpenLibrary(
+        `https://openlibrary.org/search.json?q=isbn%3A${isbn}&limit=1&fields=${fields}`,
+      ),
+    ]);
+
+    let google: any = null;
+    if (googleRes) {
+      try {
+        const data: any = await googleRes.json();
+        const item = data?.items?.[0];
+        if (item) {
+          const v = item.volumeInfo ?? {};
+          google = {
+            googleId: item.id,
+            title: v.title,
+            subtitle: v.subtitle,
+            authors: v.authors,
+            description: v.description,
+            thumbnail: v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail || null,
+            publishedDate: v.publishedDate,
+            averageRating: v.averageRating ?? null,
+            ratingsCount: v.ratingsCount ?? null,
+            pageCount: v.pageCount > 0 ? v.pageCount : null,
+            categories: v.categories,
+            publisher: v.publisher,
+            language: v.language,
+          };
+        }
+      } catch {
+        google = null;
+      }
+    }
+
+    const olDoc = olData?.docs?.[0];
+    const openLibrary = olDoc ? this.mapOpenLibraryDoc(olDoc) : null;
+
+    if (!google && !openLibrary) {
+      this.isbnCache.set(isbn, { value: null, fetchedAt: Date.now() });
+      return null;
+    }
+
+    // Google como base; Open Library rellena lo que falte
+    const base = google ?? openLibrary;
+    const fill = google ? openLibrary : null;
+    const book = {
+      ...base,
+      isbn,
+      authors: base.authors?.length ? base.authors : (fill?.authors ?? ['Autor desconocido']),
+      pageCount: base.pageCount || fill?.pageCount || null,
+      thumbnail: base.thumbnail || fill?.thumbnail || null,
+      publisher: base.publisher || fill?.publisher || null,
+      categories: base.categories?.length ? base.categories : (fill?.categories ?? []),
+      description: base.description || fill?.description || null,
+    };
+
+    this.isbnCache.set(isbn, { value: book, fetchedAt: Date.now() });
+    return book;
+  }
+
   // Libros similares por categoría o autor, evitando el libro original
   async findSimilarBooks(googleId: string, category?: string, author?: string) {
     const queries: string[] = [];

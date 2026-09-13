@@ -34,3 +34,17 @@ describe('SearchService.toOpenLibraryQuery', () => {
     expect(SearchService.toOpenLibraryQuery('la sombra del viento')).toBe('la sombra del viento');
   });
 });
+
+describe('SearchService.normalizeIsbn', () => {
+  it('acepta ISBN-13 e ISBN-10 válidos, con guiones o espacios', () => {
+    expect(SearchService.normalizeIsbn('978-0-441-17271-9')).toBe('9780441172719');
+    expect(SearchService.normalizeIsbn('0 441 17271 7')).toBe('0441172717');
+    expect(SearchService.normalizeIsbn('080442957X')).toBe('080442957X');
+  });
+
+  it('rechaza dígito de control incorrecto o EAN que no es de libro', () => {
+    expect(SearchService.normalizeIsbn('9780441172718')).toBeNull();
+    expect(SearchService.normalizeIsbn('8410000000001')).toBeNull();
+    expect(SearchService.normalizeIsbn('12345')).toBeNull();
+  });
+});

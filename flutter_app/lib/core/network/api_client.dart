@@ -138,6 +138,7 @@ class ApiClient {
     required String filename,
     String? contentType,
     bool requiresAuth = true,
+    Duration timeout = const Duration(seconds: 60),
   }) async {
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
@@ -160,7 +161,7 @@ class ApiClient {
       );
 
       developer.log('UPLOAD: $uri ($filename, ${bytes.length} bytes)');
-      final streamed = await request.send().timeout(const Duration(seconds: 60));
+      final streamed = await request.send().timeout(timeout);
       final response = await http.Response.fromStream(streamed);
 
       return _handleResponse(response);

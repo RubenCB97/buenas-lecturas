@@ -52,7 +52,7 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Necesitamos acceso a tus fotos para que puedas elegir una imagen de perfil.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Necesitamos acceso a la cámara para que puedas hacerte una foto de perfil.</string>
+	<string>Necesitamos acceso a la cámara para escanear el código de barras de tus libros y para hacerte una foto de perfil.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

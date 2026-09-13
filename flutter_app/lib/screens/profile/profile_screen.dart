@@ -11,6 +11,7 @@ import '../auth/login_screen.dart';
 import '../book_detail/book_detail_screen.dart';
 import '../../providers/theme_provider.dart';
 import '../social/shelves_screen.dart';
+import '../import/goodreads_import_screen.dart';
 import 'avatar_picker_sheet.dart';
 import 'edit_profile_sheet.dart';
 import 'theme_settings_sheet.dart';
@@ -499,6 +500,23 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+
+            const SizedBox(height: 10),
+            Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                leading: const Icon(Icons.download_rounded, color: AppTheme.primary),
+                title: const Text('Importar desde Goodreads',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                subtitle: const Text('Trae tus libros, puntuaciones, reseñas y estanterías',
+                    style: TextStyle(fontSize: 12)),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GoodreadsImportScreen()),
+                ),
+              ),
             ),
 
             const SizedBox(height: 24),

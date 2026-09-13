@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
 import { SearchService } from './search.service';
 
 @Controller('search')
@@ -19,6 +19,19 @@ export class SearchController {
     @Query('author') author?: string,
   ) {
     return this.searchService.findSimilarBooks(googleId, category, author);
+  }
+
+  /**
+   * Busca un libro por ISBN (lo usa el escáner de código de barras).
+   * 400 si el ISBN no es válido; 404 si no aparece en ningún catálogo.
+   */
+  @Get('isbn/:isbn')
+  async byIsbn(@Param('isbn') raw: string) {
+    const isbn = SearchService.normalizeIsbn(raw);
+    if (!isbn) throw new BadRequestException('El código no es un ISBN válido');
+    const book = await this.searchService.lookupByIsbn(isbn);
+    if (!book) throw new NotFoundException('No hemos encontrado ningún libro con ese ISBN');
+    return book;
   }
 
   /**
