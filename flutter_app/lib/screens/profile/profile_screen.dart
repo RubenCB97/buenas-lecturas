@@ -11,6 +11,7 @@ import '../auth/login_screen.dart';
 import '../book_detail/book_detail_screen.dart';
 import '../../providers/theme_provider.dart';
 import '../social/shelves_screen.dart';
+import '../import/export_library_tile.dart';
 import '../import/goodreads_import_screen.dart';
 import 'avatar_picker_sheet.dart';
 import 'edit_profile_sheet.dart';
@@ -518,6 +519,8 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 8),
+            const ExportLibraryTile(),
 
             const SizedBox(height: 24),
 

@@ -8,6 +8,7 @@ import { Review } from '../reviews/entities/review.entity';
 import { CustomShelf } from '../social/entities/custom-shelf.entity';
 import { User } from '../users/entities/user.entity';
 import { csvToObjects } from './csv.util';
+import { buildGoodreadsCsv, ExportEntry } from './goodreads.exporter';
 import {
   GoodreadsEntry,
   mapGoodreadsRow,
@@ -153,6 +154,49 @@ export class GoodreadsImportService {
     }
 
     return summary;
+  }
+
+  /**
+   * Exporta la biblioteca del usuario en el formato CSV de Goodreads, con
+   * estados, puntuaciones, fechas, reseñas, notas, favoritos y estanterías.
+   */
+  async exportCsv(userId: number): Promise<{ csv: string; count: number }> {
+    const [library, reviews, shelves] = await Promise.all([
+      this.userBooksRepo.find({ where: { user: { id: userId } }, relations: { book: true }, order: { addedAt: 'ASC' } }),
+      this.reviewsRepo.find({ where: { user: { id: userId } }, relations: { book: true } }),
+      this.shelvesRepo.find({ where: { user: { id: userId } }, relations: { books: true } }),
+    ]);
+
+    const reviewByBook = new Map(reviews.filter(r => r.book).map(r => [r.book.id, r.content]));
+    const shelvesByBook = new Map<number, string[]>();
+    for (const shelf of shelves) {
+      for (const book of shelf.books ?? []) {
+        shelvesByBook.set(book.id, [...(shelvesByBook.get(book.id) ?? []), shelf.name]);
+      }
+    }
+
+    const entries: ExportEntry[] = library
+      .filter(ub => ub.book)
+      .map(ub => ({
+        googleId: ub.book.googleId ?? null,
+        title: ub.book.title,
+        authors: (ub.book.authors ?? '').split(',').map(a => a.trim()).filter(Boolean),
+        isbn: ub.book.isbn ?? null,
+        rating: ub.rating ?? null,
+        averageRating: ub.book.averageRating ?? null,
+        publisher: ub.book.publisher ?? null,
+        pageCount: ub.book.pageCount ?? null,
+        publishedDate: ub.book.publishedDate ?? null,
+        finishedAt: ub.finishedAt ?? null,
+        addedAt: ub.addedAt ?? null,
+        status: ub.status,
+        isFavorite: !!ub.isFavorite,
+        shelves: shelvesByBook.get(ub.book.id) ?? [],
+        review: reviewByBook.get(ub.book.id) ?? null,
+        notes: ub.notes ?? null,
+      }));
+
+    return { csv: buildGoodreadsCsv(entries), count: entries.length };
   }
 
   /**

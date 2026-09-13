@@ -127,6 +127,24 @@ class ApiClient {
     }
   }
 
+  /// Descarga un recurso como bytes sin interpretarlo (p. ej. un CSV).
+  Future<ApiResponse<List<int>>> download(String endpoint, {bool requiresAuth = true}) async {
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+      final headers = await _getHeaders(requiresAuth: requiresAuth);
+      developer.log('DOWNLOAD: $uri');
+      final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 60));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return ApiResponse(success: true, statusCode: response.statusCode, data: response.bodyBytes);
+      }
+      final parsed = _handleResponse(response);
+      return ApiResponse(success: false, statusCode: response.statusCode, errorMessage: parsed.errorMessage);
+    } catch (e) {
+      developer.log('DOWNLOAD Error [$endpoint]: $e');
+      return ApiResponse(success: false, errorMessage: e.toString());
+    }
+  }
+
   /// Sube un archivo con multipart/form-data.
   ///
   /// Usa bytes en memoria para que funcione igual en móvil y en Flutter Web
