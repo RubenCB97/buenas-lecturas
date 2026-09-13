@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleDestroy } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserBook, ReadingStatus } from './entities/user-book.entity';
@@ -8,9 +8,17 @@ import { Book } from '../books/entities/book.entity';
 import { User } from '../users/entities/user.entity';
 import { computeReadingStats, ReadingStats } from './reading-stats';
 
+/**
+ * Tiempo sin cambios antes de publicar una puntuación en Comunidad. Al tocar
+ * las estrellas se envían varias notas seguidas y solo interesa la última.
+ */
+export const RATING_ACTIVITY_DELAY_MS = 5000;
+
 @Injectable()
-export class UserBooksService {
+export class UserBooksService implements OnModuleDestroy {
   private readonly logger = new Logger(UserBooksService.name);
+  /** Puntuaciones pendientes de publicar, por usuario y libro. */
+  private readonly pendingRatingActivities = new Map<string, NodeJS.Timeout>();
 
   constructor(
     @InjectRepository(UserBook)
@@ -19,6 +27,37 @@ export class UserBooksService {
     private activityRepository: Repository<Activity>,
     private booksService: BooksService,
   ) {}
+
+  onModuleDestroy() {
+    for (const timer of this.pendingRatingActivities.values()) clearTimeout(timer);
+    this.pendingRatingActivities.clear();
+  }
+
+  /**
+   * Publica la actividad de puntuación cuando lleva RATING_ACTIVITY_DELAY_MS
+   * sin cambiar. Cada nueva nota reinicia la espera.
+   */
+  private scheduleRatingActivity(userId: number, bookId: number) {
+    const key = `${userId}:${bookId}`;
+    const previous = this.pendingRatingActivities.get(key);
+    if (previous) clearTimeout(previous);
+
+    const timer = setTimeout(async () => {
+      this.pendingRatingActivities.delete(key);
+      try {
+        const userBook = await this.userBooksRepository.findOne({
+          where: { user: { id: userId }, book: { id: bookId } },
+          relations: { book: true },
+        });
+        // Si la ha quitado o borrado el libro mientras tanto, no se publica
+        if (!userBook?.rating || userBook.rating <= 0) return;
+        await this.logActivity({ id: userId }, userBook.book, 'RATED', `Puntuación: ${String(userBook.rating).replace(".", ",")} estrellas`);
+      } catch (e) {
+        this.logger.error(`Error publicando la puntuación: ${e.message}`);
+      }
+    }, RATING_ACTIVITY_DELAY_MS);
+    this.pendingRatingActivities.set(key, timer);
+  }
 
   private async logActivity(user: { id: number }, book: any, action: string, details?: string) {
     try {
@@ -119,8 +158,9 @@ export class UserBooksService {
     // Admite medios puntos: 0.5, 1.0, 1.5, ..., 5.0
     const clamped = Math.max(0, Math.min(5, Number(rating)));
     userBook.rating = Math.round(clamped * 2) / 2;
-    await this.logActivity(userBook.user, userBook.book, 'RATED', `Puntuación: ${userBook.rating} estrellas`);
-    return this.userBooksRepository.save(userBook);
+    const saved = await this.userBooksRepository.save(userBook);
+    this.scheduleRatingActivity(userId, userBook.book.id);
+    return saved;
   }
 
   // Progreso de lectura (página actual)

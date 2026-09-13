@@ -14,6 +14,7 @@ class ReadingStats {
   final List<({int month, int books, int pages})> byMonth;
   final List<({String name, int count})> topGenres;
   final List<({String name, int count})> topAuthors;
+  /// Libros por nota en tramos de medio punto: índice 0 = 0,5★ … índice 9 = 5★.
   final List<int> ratingDistribution;
   final ({String title, int pages})? longestBook;
   final ({String title, int pages})? shortestBook;
@@ -59,12 +60,35 @@ class ReadingStats {
           .toList(),
       topGenres: ranking(json['topGenres']),
       topAuthors: ranking(json['topAuthors']),
-      ratingDistribution: (json['ratingDistribution'] as List? ?? []).map(i).toList(),
+      ratingDistribution: halfStarDistribution((json['ratingDistribution'] as List? ?? []).map(i).toList()),
       longestBook: bookOf(json['longestBook']),
       shortestBook: bookOf(json['shortestBook']),
       statusCounts: (json['statusCounts'] as Map? ?? {}).map((k, v) => MapEntry(k.toString(), i(v))),
       availableYears: (json['availableYears'] as List? ?? []).map(i).toList(),
     );
+  }
+
+  /// Normaliza la distribución a 10 tramos de medio punto. Acepta también el
+  /// formato antiguo de 5 tramos (estrellas enteras).
+  static List<int> halfStarDistribution(List<int> raw) {
+    final result = List<int>.filled(10, 0);
+    if (raw.length == 5) {
+      for (var star = 1; star <= 5; star++) {
+        result[star * 2 - 1] = raw[star - 1];
+      }
+    } else {
+      for (var k = 0; k < raw.length && k < 10; k++) {
+        result[k] = raw[k];
+      }
+    }
+    return result;
+  }
+
+  /// Etiqueta de un tramo: 9 → «5 ★», 8 → «4,5 ★».
+  static String ratingLabel(int index) {
+    final value = (index + 1) / 2;
+    final text = value == value.roundToDouble() ? value.toInt().toString() : value.toString().replaceAll('.', ',');
+    return '$text ★';
   }
 }
 
@@ -246,8 +270,8 @@ class _ReadingStatsScreenState extends State<ReadingStatsScreen> {
           title: 'Tus puntuaciones',
           child: _Ranking(
             items: [
-              for (var star = 5; star >= 1; star--)
-                (name: '$star ★', count: s.ratingDistribution[star - 1]),
+              for (var k = 9; k >= 0; k--)
+                (name: ReadingStats.ratingLabel(k), count: s.ratingDistribution[k]),
             ],
             keepZeros: true,
           ),

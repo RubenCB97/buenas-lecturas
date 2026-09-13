@@ -330,7 +330,7 @@ class ProfileScreen extends StatelessWidget {
                   child: _buildStatBox(
                     context,
                     title: 'Prom. ★',
-                    value: avgUserRating == 0 ? '—' : avgUserRating.toStringAsFixed(1),
+                    value: avgUserRating == 0 ? '—' : avgUserRating.toStringAsFixed(1).replaceAll('.', ','),
                     icon: Icons.star_rounded,
                     color: AppTheme.starGold,
                   ),

@@ -64,7 +64,8 @@ export function computeReadingStats(library: StatsInput[], year: number): Readin
   const byMonth = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, books: 0, pages: 0 }));
   const genres = new Map<string, { name: string; count: number }>();
   const authors = new Map<string, { name: string; count: number }>();
-  const ratingDistribution = [0, 0, 0, 0, 0];
+  // 10 tramos de medio punto: índice 0 = 0,5★ … índice 9 = 5★
+  const ratingDistribution = new Array(10).fill(0);
 
   let pagesRead = 0;
   let booksWithPages = 0;
@@ -92,8 +93,8 @@ export function computeReadingStats(library: StatsInput[], year: number): Readin
     if (ub.rating && ub.rating > 0) {
       ratingSum += ub.rating;
       ratingCount++;
-      const stars = Math.min(5, Math.max(1, Math.round(ub.rating)));
-      ratingDistribution[stars - 1]++;
+      const halves = Math.min(10, Math.max(1, Math.round(ub.rating * 2)));
+      ratingDistribution[halves - 1]++;
     }
 
     if (ub.startedAt && ub.finishedAt) {

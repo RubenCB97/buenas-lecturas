@@ -18,7 +18,7 @@ void main() {
         {'name': 'Science Fiction', 'count': 2},
       ],
       'topAuthors': [],
-      'ratingDistribution': [0, 0, 1, 0, 1],
+      'ratingDistribution': [0, 0, 0, 0, 0, 1, 0, 0, 1, 0],
       'longestBook': {'title': 'Dune', 'pages': 688},
       'shortestBook': null,
       'statusCounts': {'read': 4, 'reading': 1, 'wantToRead': 1, 'abandoned': 1},
@@ -34,5 +34,15 @@ void main() {
     expect(s.shortestBook, isNull);
     expect(s.statusCounts['abandoned'], 1);
     expect(s.availableYears, [2026, 2025]);
+    expect(s.ratingDistribution[8], 1); // 4,5★
+  });
+
+  test('distribución de notas con medios puntos', () {
+    // Formato antiguo de 5 tramos: cada estrella entera va a su tramo
+    expect(ReadingStats.halfStarDistribution([1, 0, 2, 0, 3]), [0, 1, 0, 0, 0, 2, 0, 0, 0, 3]);
+    expect(ReadingStats.halfStarDistribution([]), List.filled(10, 0));
+    expect(ReadingStats.ratingLabel(9), '5 ★');
+    expect(ReadingStats.ratingLabel(4), '2,5 ★');
+    expect(ReadingStats.ratingLabel(0), '0,5 ★');
   });
 }

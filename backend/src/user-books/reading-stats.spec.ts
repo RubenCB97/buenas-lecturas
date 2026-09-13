@@ -37,7 +37,8 @@ describe('computeReadingStats', () => {
 
   it('calcula notas, ritmo y extremos', () => {
     expect(stats.averageRating).toBe(3.8); // (4.5 + 3) / 2
-    expect(stats.ratingDistribution).toEqual([0, 0, 1, 0, 1]); // 4.5 → 5★
+    // Tramos de medio punto: 3★ en el índice 5 y 4,5★ en el índice 8
+    expect(stats.ratingDistribution).toEqual([0, 0, 0, 0, 0, 1, 0, 0, 1, 0]);
     expect(stats.averageDaysToFinish).toBe(7); // (10 + 4) / 2
     expect(stats.longestBook).toEqual({ title: 'Dune', pages: 688 });
     expect(stats.shortestBook).toEqual({ title: 'Marina', pages: 300 });
