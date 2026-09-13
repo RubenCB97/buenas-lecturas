@@ -6,6 +6,8 @@ export enum ReadingStatus {
   WANT_TO_READ = 'WANT_TO_READ',
   READING = 'READING',
   READ = 'READ',
+  /** Empezado y dejado sin terminar («No lo terminé»). */
+  ABANDONED = 'ABANDONED',
 }
 
 @Entity()

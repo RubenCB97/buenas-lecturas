@@ -4,6 +4,9 @@ enum ReadingStatus {
   wantToRead,
   reading,
   read,
+
+  /// Empezado y dejado sin terminar.
+  abandoned,
 }
 
 extension ReadingStatusExtension on ReadingStatus {
@@ -15,6 +18,8 @@ extension ReadingStatusExtension on ReadingStatus {
         return 'READING';
       case ReadingStatus.read:
         return 'READ';
+      case ReadingStatus.abandoned:
+        return 'ABANDONED';
     }
   }
 
@@ -26,6 +31,8 @@ extension ReadingStatusExtension on ReadingStatus {
         return 'Leyendo';
       case ReadingStatus.read:
         return 'Leído';
+      case ReadingStatus.abandoned:
+        return 'No lo terminé';
     }
   }
 
@@ -36,6 +43,8 @@ extension ReadingStatusExtension on ReadingStatus {
         return ReadingStatus.reading;
       case 'READ':
         return ReadingStatus.read;
+      case 'ABANDONED':
+        return ReadingStatus.abandoned;
       case 'WANT_TO_READ':
       default:
         return ReadingStatus.wantToRead;

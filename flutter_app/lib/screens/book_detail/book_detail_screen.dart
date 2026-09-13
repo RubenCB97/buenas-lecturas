@@ -119,6 +119,22 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                     Navigator.pop(ctx);
                   },
                 ),
+                ListTile(
+                  leading: const Icon(Icons.do_not_disturb_on_rounded, color: Color(0xFFB45309)),
+                  title: const Text('No lo terminé'),
+                  subtitle: const Text('Se guarda hasta dónde llegaste', style: TextStyle(fontSize: 12)),
+                  trailing: userBook?.status == ReadingStatus.abandoned
+                      ? const Icon(Icons.check_rounded, color: Color(0xFFB45309))
+                      : null,
+                  onTap: () {
+                    if (userBook != null) {
+                      libraryProvider.updateStatus(userBook.id, ReadingStatus.abandoned);
+                    } else {
+                      libraryProvider.addBook(widget.book, status: ReadingStatus.abandoned);
+                    }
+                    Navigator.pop(ctx);
+                  },
+                ),
                 if (userBook != null) ...[
                   const Divider(),
                   ListTile(

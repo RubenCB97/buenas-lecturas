@@ -23,7 +23,7 @@ class _LibraryScreenState extends State<LibraryScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _tabController.addListener(_handleTabChange);
   }
 
@@ -46,6 +46,9 @@ class _LibraryScreenState extends State<LibraryScreen>
         break;
       case 4:
         libraryProvider.setFilter(LibraryFilter.favorites);
+        break;
+      case 5:
+        libraryProvider.setFilter(LibraryFilter.abandoned);
         break;
     }
   }
@@ -156,6 +159,7 @@ class _LibraryScreenState extends State<LibraryScreen>
             Tab(text: 'Por leer (${libraryProvider.countWantToRead})'),
             Tab(text: 'Leídos (${libraryProvider.countRead})'),
             Tab(text: '★ Favoritos (${libraryProvider.countFavorites})'),
+            Tab(text: 'No terminados (${libraryProvider.countAbandoned})'),
           ],
         ),
       ),

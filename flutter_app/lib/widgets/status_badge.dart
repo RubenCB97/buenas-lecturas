@@ -34,6 +34,11 @@ class StatusBadge extends StatelessWidget {
         textColor = const Color(0xFF4B5563);
         icon = Icons.bookmark_added_rounded;
         break;
+      case ReadingStatus.abandoned:
+        bgColor = const Color(0xFFB45309).withValues(alpha: 0.15);
+        textColor = const Color(0xFF92400E);
+        icon = Icons.do_not_disturb_on_rounded;
+        break;
     }
 
     return Container(

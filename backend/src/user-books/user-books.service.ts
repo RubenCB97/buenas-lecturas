@@ -51,6 +51,11 @@ export class UserBooksService {
     if (newStatus === ReadingStatus.WANT_TO_READ) {
       userBook.currentPage = null as any;
     }
+    // Abandonado: conservamos hasta dónde llegó y cuándo empezó, pero no
+    // cuenta como terminado
+    if (newStatus === ReadingStatus.ABANDONED) {
+      userBook.finishedAt = null as any;
+    }
     userBook.status = newStatus;
   }
 

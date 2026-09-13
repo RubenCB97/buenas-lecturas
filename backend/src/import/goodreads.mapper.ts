@@ -29,6 +29,11 @@ const STATUS_SHELVES: Record<string, ReadingStatus> = {
 
 const FAVORITE_SHELVES = new Set(['favorites', 'favourites', 'favoritos', 'favorite', 'favourite']);
 
+/** Nombres habituales de la estantería de libros abandonados en Goodreads. */
+const ABANDONED_SHELVES = new Set([
+  'did-not-finish', 'dnf', 'abandoned', 'abandonados', 'abandonado', 'no-terminados', 'sin-terminar',
+]);
+
 /** Columnas mínimas para reconocer un export de Goodreads. */
 export const REQUIRED_GOODREADS_COLUMNS = ['Title', 'Exclusive Shelf'];
 
@@ -85,22 +90,24 @@ export function mapGoodreadsRow(row: Record<string, string>): GoodreadsEntry | n
     .filter(Boolean);
 
   const exclusive = (row['Exclusive Shelf'] ?? '').trim().toLowerCase();
-  const status = STATUS_SHELVES[exclusive] ?? ReadingStatus.WANT_TO_READ;
+  const status = ABANDONED_SHELVES.has(exclusive)
+    ? ReadingStatus.ABANDONED
+    : (STATUS_SHELVES[exclusive] ?? ReadingStatus.WANT_TO_READ);
 
   const allShelves = (row['Bookshelves'] ?? '')
     .split(',')
     .map(s => s.trim().toLowerCase())
     .filter(Boolean);
 
-  // Estanterías exclusivas no estándar (p. ej. "did-not-finish") se conservan
+  // Otras estanterías exclusivas no estándar (p. ej. "releer") se conservan
   // como estantería personalizada para no perder esa información.
-  if (exclusive && !STATUS_SHELVES[exclusive] && !allShelves.includes(exclusive)) {
+  if (exclusive && !STATUS_SHELVES[exclusive] && !ABANDONED_SHELVES.has(exclusive) && !allShelves.includes(exclusive)) {
     allShelves.push(exclusive);
   }
 
   const isFavorite = allShelves.some(s => FAVORITE_SHELVES.has(s));
   const shelves = [
-    ...new Set(allShelves.filter(s => !STATUS_SHELVES[s] && !FAVORITE_SHELVES.has(s))),
+    ...new Set(allShelves.filter(s => !STATUS_SHELVES[s] && !FAVORITE_SHELVES.has(s) && !ABANDONED_SHELVES.has(s))),
   ];
 
   const ratingNum = Number(row['My Rating']);

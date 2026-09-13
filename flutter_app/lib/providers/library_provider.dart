@@ -3,7 +3,7 @@ import '../core/network/api_client.dart';
 import '../models/book_model.dart';
 import '../models/user_book_model.dart';
 
-enum LibraryFilter { all, reading, wantToRead, read, favorites }
+enum LibraryFilter { all, reading, wantToRead, read, favorites, abandoned }
 enum LibrarySort { recent, title, rating, dateStarted, dateFinished }
 
 class LibraryProvider extends ChangeNotifier {
@@ -42,6 +42,9 @@ class LibraryProvider extends ChangeNotifier {
         break;
       case LibraryFilter.favorites:
         list = list.where((b) => b.isFavorite).toList();
+        break;
+      case LibraryFilter.abandoned:
+        list = list.where((b) => b.status == ReadingStatus.abandoned).toList();
         break;
       case LibraryFilter.all:
         break;
@@ -83,6 +86,7 @@ class LibraryProvider extends ChangeNotifier {
   int get countWantToRead => _libraryBooks.where((b) => b.status == ReadingStatus.wantToRead).length;
   int get countRead => _libraryBooks.where((b) => b.status == ReadingStatus.read).length;
   int get countFavorites => _libraryBooks.where((b) => b.isFavorite).length;
+  int get countAbandoned => _libraryBooks.where((b) => b.status == ReadingStatus.abandoned).length;
   int get totalBooks => _libraryBooks.length;
 
   // Libros que se están leyendo actualmente

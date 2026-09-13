@@ -43,8 +43,9 @@ describe('Goodreads mapper', () => {
       HEADER +
       '\n1,Libro A,Autora,,"Otra, Tercera",="",="",0,0,,,,,,,2024/01/05,,,currently-reading,,,,0,0' +
       '\n2,Libro B,Autora,,,="",="",0,0,,,,,,,2024/01/05,,,to-read,,,,0,0' +
-      '\n3,Libro C,Autora,,,="",="",0,0,,,,,,,2024/01/05,,,did-not-finish,,,,0,0';
-    const [a, b, c] = csvToObjects(csv).map(mapGoodreadsRow);
+      '\n3,Libro C,Autora,,,="",="",0,0,,,,,,,2024/01/05,,,releer,,,,0,0' +
+      '\n4,Libro D,Autora,,,="",="",0,0,,,,,,,2024/01/05,did-not-finish,,did-not-finish,,,,0,0';
+    const [a, b, c, d] = csvToObjects(csv).map(mapGoodreadsRow);
 
     expect(a!.status).toBe(ReadingStatus.READING);
     expect(a!.rating).toBeNull();
@@ -53,7 +54,10 @@ describe('Goodreads mapper', () => {
     expect(b!.status).toBe(ReadingStatus.WANT_TO_READ);
     // Una estantería exclusiva desconocida se conserva como personalizada
     expect(c!.status).toBe(ReadingStatus.WANT_TO_READ);
-    expect(c!.shelves).toEqual(['did-not-finish']);
+    expect(c!.shelves).toEqual(['releer']);
+    // "did-not-finish" pasa a ser el estado "No lo terminé", no una estantería
+    expect(d!.status).toBe(ReadingStatus.ABANDONED);
+    expect(d!.shelves).toEqual([]);
   });
 
   it('ignora filas sin título', () => {
