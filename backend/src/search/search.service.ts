@@ -837,6 +837,59 @@ export class SearchService implements OnModuleInit {
     return book;
   }
 
+  /**
+   * Busca un libro por el id de su catálogo de origen, para abrir los enlaces
+   * compartidos de libros que nunca se guardaron en la base de datos:
+   * obras de Open Library ("OL123W") o volúmenes de Google Books.
+   */
+  async lookupByExternalId(id: string): Promise<any | null> {
+    const clean = (id ?? '').trim();
+    if (!clean || clean.length > 64 || !/^[\w-]+$/.test(clean)) return null;
+
+    if (/^OL\d+W$/.test(clean)) {
+      const fields =
+        'key,title,subtitle,author_name,cover_i,first_publish_year,ratings_average,ratings_count,' +
+        'number_of_pages_median,subject,publisher,language,isbn';
+      const data = await this.fetchOpenLibrary(
+        `https://openlibrary.org/search.json?q=key%3A%2Fworks%2F${clean}&limit=1&fields=${fields}`,
+      );
+      const doc = data?.docs?.[0];
+      return doc ? this.mapOpenLibraryDoc(doc) : null;
+    }
+
+    const apiKey = this.configService.get<string>('GOOGLE_BOOKS_API_KEY');
+    const res = await this.fetchWithRetry(
+      `https://www.googleapis.com/books/v1/volumes/${encodeURIComponent(clean)}${apiKey ? `?key=${apiKey}` : ''}`,
+      1,
+    ).catch(() => null);
+    if (!res) return null;
+    try {
+      const item: any = await res.json();
+      const v = item?.volumeInfo;
+      if (!v?.title) return null;
+      return {
+        googleId: item.id,
+        title: v.title,
+        subtitle: v.subtitle,
+        authors: v.authors ?? ['Autor desconocido'],
+        description: v.description,
+        isbn:
+          v.industryIdentifiers?.find((i: any) => i.type === 'ISBN_13')?.identifier ||
+          v.industryIdentifiers?.find((i: any) => i.type === 'ISBN_10')?.identifier,
+        thumbnail: v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail || null,
+        publishedDate: v.publishedDate,
+        averageRating: v.averageRating ?? null,
+        ratingsCount: v.ratingsCount ?? null,
+        pageCount: v.pageCount > 0 ? v.pageCount : null,
+        categories: v.categories,
+        publisher: v.publisher,
+        language: v.language,
+      };
+    } catch {
+      return null;
+    }
+  }
+
   // Libros similares por categoría o autor, evitando el libro original
   async findSimilarBooks(googleId: string, category?: string, author?: string) {
     const queries: string[] = [];

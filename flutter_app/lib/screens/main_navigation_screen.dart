@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/network/api_client.dart';
 import '../core/theme/app_theme.dart';
+import '../core/utils/deep_link.dart';
+import '../models/book_model.dart';
 import '../providers/friends_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/notifications_provider.dart';
 import '../providers/social_provider.dart';
+import 'book_detail/book_detail_screen.dart';
 import 'challenges/challenges_screen.dart';
 import 'discover/discover_screen.dart';
 import 'explore/explore_screen.dart';
@@ -44,7 +48,24 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       Provider.of<FriendsProvider>(context, listen: false).fetchAll();
       Provider.of<SocialProvider>(context, listen: false).fetchRecommendations();
       Provider.of<NotificationsProvider>(context, listen: false).startPolling();
+      _openLinkedBook();
     });
+  }
+
+  /// Si la app se abrió con un enlace a un libro (/libro/<id>), abre su ficha.
+  Future<void> _openLinkedBook() async {
+    final id = DeepLink.consumePendingBookId();
+    if (id == null) return;
+    final r = await ApiClient().get('/books/lookup/${Uri.encodeComponent(id)}', requiresAuth: false);
+    if (!mounted) return;
+    if (r.success && r.data is Map<String, dynamic>) {
+      final book = BookModel.fromJson(r.data as Map<String, dynamic>);
+      Navigator.push(context, MaterialPageRoute(builder: (_) => BookDetailScreen(book: book)));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hemos podido abrir el libro del enlace')),
+      );
+    }
   }
 
   @override

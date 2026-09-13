@@ -18,10 +18,16 @@ void main() {
     expect(BookShare.publicLink(b), 'https://openlibrary.org/isbn/9788408175216');
   });
 
-  test('sin enlace si no hay identificadores', () {
+  test('sin enlace de catálogo si no hay identificadores', () {
     final b = BookModel(title: 'X', googleId: 'custom_123');
     expect(BookShare.publicLink(b), isNull);
-    expect(BookShare.buildText(b), contains(BookShare.appUrl));
+    expect(BookShare.buildText(b), contains('${BookShare.appUrl}/libro/custom_123'));
+  });
+
+  test('sin id solo enlaza a la app', () {
+    final b = BookModel(title: 'X');
+    expect(BookShare.appLink(b), isNull);
+    expect(BookShare.buildText(b), endsWith(BookShare.appUrl));
   });
 
   test('el texto incluye título, autor y enlace', () {
@@ -30,6 +36,6 @@ void main() {
     );
     expect(text, contains('«Dune»'));
     expect(text, contains('de Frank Herbert'));
-    expect(text, contains('books.google.com'));
+    expect(text, contains('/libro/B1hSG45JCX4C'));
   });
 }

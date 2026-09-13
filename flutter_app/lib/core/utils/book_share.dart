@@ -3,16 +3,23 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../models/book_model.dart';
 import '../theme/app_theme.dart';
+import 'deep_link.dart';
 
 /// Compartir un libro: menú nativo del sistema o copia al portapapeles.
 class BookShare {
   BookShare._();
 
   /// Web pública de la app.
-  static const String appUrl = 'https://buenas-lecturas.costacode.es';
+  static const String appUrl = DeepLink.appUrl;
 
-  /// Enlace público al libro. La app no tiene rutas por libro, así que
-  /// apuntamos a la ficha del catálogo del que procede.
+  /// Enlace que abre la ficha del libro dentro de BuenasLecturas.
+  static String? appLink(BookModel book) {
+    final id = book.googleId?.trim();
+    if (id == null || id.isEmpty) return null;
+    return RegExp(r'^[\w-]{1,64}$').hasMatch(id) ? DeepLink.bookUrl(id) : null;
+  }
+
+  /// Ficha del libro en el catálogo del que procede (Google Books / Open Library).
   static String? publicLink(BookModel book) {
     final id = book.googleId?.trim();
     if (id != null && id.isNotEmpty) {
@@ -20,7 +27,7 @@ class BookShare {
       if (RegExp(r'^OL\d+W$').hasMatch(id)) {
         return 'https://openlibrary.org/works/$id';
       }
-      if (!id.startsWith('custom_') && !id.startsWith('ol_')) {
+      if (!id.startsWith('custom_') && !id.startsWith('ol_') && !id.startsWith('gr_')) {
         return 'https://books.google.com/books?id=${Uri.encodeComponent(id)}';
       }
     }
@@ -32,18 +39,16 @@ class BookShare {
   }
 
   static String buildText(BookModel book) {
-    final link = publicLink(book);
+    final link = appLink(book);
     final buffer = StringBuffer()
       ..writeln('📖 «${book.title}»')
-      ..writeln('de ${book.authorDisplay}');
+      ..writeln('de ${book.authorDisplay}')
+      ..writeln();
     if (link != null) {
-      buffer
-        ..writeln()
-        ..writeln(link);
+      buffer.write('Míralo en BuenasLecturas: $link');
+    } else {
+      buffer.write('Descúbrelo en BuenasLecturas: $appUrl');
     }
-    buffer
-      ..writeln()
-      ..write('Descúbrelo en BuenasLecturas: $appUrl');
     return buffer.toString();
   }
 

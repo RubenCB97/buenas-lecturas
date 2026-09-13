@@ -188,6 +188,10 @@ export class BooksService implements OnModuleInit {
     return this.booksRepository.find();
   }
 
+  findByGoogleId(googleId: string) {
+    return this.booksRepository.findOne({ where: { googleId } });
+  }
+
   findOne(id: number) {
     return this.booksRepository.findOneBy({ id });
   }
