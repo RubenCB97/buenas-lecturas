@@ -9,6 +9,8 @@ class FirebaseConfig {
   FirebaseConfig._();
 
   static const _apiKey = String.fromEnvironment('FIREBASE_API_KEY');
+  /// Clave propia de iOS; si no se indica, se usa FIREBASE_API_KEY.
+  static const _iosApiKey = String.fromEnvironment('FIREBASE_IOS_API_KEY');
   static const _projectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
   static const _senderId = String.fromEnvironment('FIREBASE_SENDER_ID');
   static const _androidAppId = String.fromEnvironment('FIREBASE_ANDROID_APP_ID');
@@ -17,7 +19,7 @@ class FirebaseConfig {
 
   /// Opciones para la plataforma, o `null` si no está configurada.
   static FirebaseOptions? optionsFor({required bool isIOS}) => build(
-        apiKey: _apiKey,
+        apiKey: isIOS && _iosApiKey.isNotEmpty ? _iosApiKey : _apiKey,
         projectId: _projectId,
         senderId: _senderId,
         appId: isIOS ? _iosAppId : _androidAppId,
