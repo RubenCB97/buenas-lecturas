@@ -1,6 +1,7 @@
 import { Controller, Get, Post, UseGuards, Req, Res, Logger } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
+import { buildAuthRedirect, GoogleAuthGuard } from './google-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -8,27 +9,27 @@ export class AuthController {
 
   constructor(private readonly authService: AuthService) {}
 
+  /** Inicia el login. La app móvil añade `?platform=app`. */
   @Get('google')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleAuthGuard)
   async googleAuth(@Req() req) {}
 
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req, @Res() res) {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8100';
+    const state = req.query?.state;
     try {
       if (!req.user) {
         throw new Error('No user from google');
       }
       const result = await this.authService.validateGoogleUser(req.user);
-      const token = result.access_token;
-      const user = JSON.stringify(result.user);
-      
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8100';
-      return res.redirect(`${frontendUrl}/tabs/callback?token=${token}&user=${encodeURIComponent(user)}`);
+      return res.redirect(
+        buildAuthRedirect(state, frontendUrl, { token: result.access_token, user: JSON.stringify(result.user) }),
+      );
     } catch (error) {
       this.logger.error(`Error en google callback: ${error.message}`);
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8100';
-      return res.redirect(`${frontendUrl}/login?error=auth_failed`);
+      return res.redirect(buildAuthRedirect(state, frontendUrl, null));
     }
   }
 

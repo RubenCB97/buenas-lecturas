@@ -1,8 +1,12 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show PlatformException;
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/google_auth_callback.dart';
 import '../../providers/auth_provider.dart';
 import '../main_navigation_screen.dart';
 
@@ -45,11 +49,49 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _loginGoogle() async {
+    if (!kIsWeb) return _loginGoogleInApp();
+
+    // Web: la propia página va a Google y vuelve con ?token=… (AuthProvider)
     final Uri url = Uri.parse('${ApiConstants.baseUrl}/auth/google');
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No se pudo abrir la página de Google')),
       );
+    }
+  }
+
+  /// Móvil: abre Google en una ventana segura del sistema y recoge la sesión
+  /// cuando el servidor redirige a buenaslecturas://auth.
+  Future<void> _loginGoogleInApp() async {
+    setState(() => _isLoading = true);
+    String? error;
+    try {
+      final resultUrl = await FlutterWebAuth2.authenticate(
+        url: '${ApiConstants.baseUrl}/auth/google?platform=app',
+        callbackUrlScheme: GoogleAuthCallback.scheme,
+      );
+      final callback = GoogleAuthCallback.parse(resultUrl);
+      if (callback.isSuccess) {
+        if (!mounted) return;
+        await Provider.of<AuthProvider>(context, listen: false).setSession(callback.token!, callback.user!);
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        );
+        return;
+      }
+      error = 'No se pudo iniciar sesión con Google';
+    } on PlatformException catch (e) {
+      // CANCELED: el usuario cerró la ventana de Google
+      if (e.code != 'CANCELED') error = 'No se pudo abrir la página de Google';
+    } catch (_) {
+      error = 'No se pudo iniciar sesión con Google';
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+    if (error != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
