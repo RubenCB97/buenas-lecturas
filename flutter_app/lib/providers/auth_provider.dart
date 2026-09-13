@@ -27,6 +27,21 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      // Interceptar callback de Google OAuth en Web
+      if (Uri.base.queryParameters.containsKey('token') && Uri.base.queryParameters.containsKey('user')) {
+        final urlToken = Uri.base.queryParameters['token']!;
+        final userStr = Uri.base.queryParameters['user']!;
+        try {
+          final decodedUser = UserModel.fromJson(jsonDecode(userStr));
+          await prefs.setString(ApiClient.tokenKey, urlToken);
+          await prefs.setString(ApiClient.userKey, jsonEncode(decodedUser.toJson()));
+          // Si estamos en Web, idealmente limpiaríamos la URL, pero con setSession basta para entrar
+        } catch (e) {
+          debugPrint('Error parseando usuario de la URL: $e');
+        }
+      }
+
       _token = prefs.getString(ApiClient.tokenKey);
       final userJson = prefs.getString(ApiClient.userKey);
 
