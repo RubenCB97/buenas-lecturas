@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/network/api_client.dart';
 import '../models/user_model.dart';
 import 'library_provider.dart';
+import '../core/push/push_notifications.dart';
 
 class AuthProvider extends ChangeNotifier {
   final ApiClient _apiClient = ApiClient();
@@ -189,6 +190,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Antes de borrar el token de sesión, para poder avisar al servidor
+    await PushNotifications.unregister();
     _token = null;
     _currentUser = null;
     _errorMessage = null;

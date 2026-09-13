@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Not } from 'typeorm';
 import { Friendship, FriendshipStatus } from './entities/friendship.entity';
 import { User } from '../users/entities/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class FriendsService {
@@ -11,7 +13,17 @@ export class FriendsService {
     private friendsRepository: Repository<Friendship>,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    private notificationsService: NotificationsService,
   ) {}
+
+  private async notifyFriendAccepted(accepterId: number, requesterId: number) {
+    const name = await this.notificationsService.displayName(accepterId);
+    await this.notificationsService.notifyUsers([requesterId], {
+      actorUserId: accepterId,
+      type: NotificationType.FRIEND_ACCEPTED,
+      title: `${name} ha aceptado tu solicitud de amistad`,
+    });
+  }
 
   async searchUsers(query: string, excludeUserId: number) {
     if (!query || query.trim().length < 2) return [];
@@ -40,7 +52,9 @@ export class FriendsService {
     if (existing) {
       if (existing.status === FriendshipStatus.PENDING && existing.recipient.id === fromUserId) {
         existing.status = FriendshipStatus.ACCEPTED;
-        return this.friendsRepository.save(existing);
+        const saved = await this.friendsRepository.save(existing);
+        await this.notifyFriendAccepted(fromUserId, toUserId);
+        return saved;
       }
       return existing;
     }
@@ -49,7 +63,15 @@ export class FriendsService {
       recipient: { id: toUserId } as User,
       status: FriendshipStatus.PENDING,
     });
-    return this.friendsRepository.save(fs);
+    const saved = await this.friendsRepository.save(fs);
+    const name = await this.notificationsService.displayName(fromUserId);
+    await this.notificationsService.notifyUsers([toUserId], {
+      actorUserId: fromUserId,
+      type: NotificationType.FRIEND_REQUEST,
+      title: `${name} quiere ser tu amigo`,
+      body: 'Acepta la solicitud para ver sus lecturas',
+    });
+    return saved;
   }
 
   async respondRequest(userId: number, friendshipId: number, accept: boolean) {
@@ -58,7 +80,9 @@ export class FriendsService {
     if (fs.recipient.id !== userId) throw new ForbiddenException('No puedes responder esta solicitud');
     if (accept) {
       fs.status = FriendshipStatus.ACCEPTED;
-      return this.friendsRepository.save(fs);
+      const saved = await this.friendsRepository.save(fs);
+      await this.notifyFriendAccepted(userId, fs.requester.id);
+      return saved;
     }
     await this.friendsRepository.remove(fs);
     return { removed: true };

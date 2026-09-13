@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ReadingGroup } from './entities/reading-group.entity';
 import { GroupMember } from './entities/group-member.entity';
@@ -13,6 +14,7 @@ import { BooksModule } from '../books/books.module';
   imports: [
     TypeOrmModule.forFeature([ReadingGroup, GroupMember, GroupBook, GroupMessage, UserBook]),
     BooksModule,
+    NotificationsModule,
   ],
   providers: [GroupsService],
   controllers: [GroupsController],

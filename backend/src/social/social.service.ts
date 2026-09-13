@@ -12,6 +12,8 @@ import { User } from '../users/entities/user.entity';
 import { Book } from '../books/entities/book.entity';
 import { BooksService } from '../books/books.service';
 import { FriendsService } from '../friends/friends.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class SocialService {
@@ -25,6 +27,7 @@ export class SocialService {
     @InjectRepository(UserBook) private userBooksRepo: Repository<UserBook>,
     private booksService: BooksService,
     private friendsService: FriendsService,
+    private notificationsService: NotificationsService,
   ) {}
 
   // ---------------- Feed de amigos ----------------
@@ -158,7 +161,17 @@ export class SocialService {
       book,
       note: note ?? undefined,
     } as any);
-    return this.recRepo.save(rec);
+    const saved = await this.recRepo.save(rec);
+    const name = await this.notificationsService.displayName(fromUserId);
+    await this.notificationsService.notifyUsers([toUserId], {
+      actorUserId: fromUserId,
+      type: NotificationType.RECOMMENDATION_RECEIVED,
+      title: `${name} te recomienda «${book.title}»`,
+      body: note?.trim() ? note.trim().slice(0, 140) : undefined,
+      refType: 'recommendation',
+      refId: (saved as any).id,
+    });
+    return saved;
   }
 
   async myRecommendations(userId: number) {

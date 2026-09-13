@@ -2,9 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/network/api_client.dart';
+import '../core/push/push_notifications.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/deep_link.dart';
 import '../models/book_model.dart';
+import '../models/notification_model.dart';
 import '../providers/friends_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/notifications_provider.dart';
@@ -92,6 +94,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       Provider.of<SocialProvider>(context, listen: false).fetchRecommendations();
       Provider.of<NotificationsProvider>(context, listen: false).startPolling();
       _openLinkedBook();
+      _initPush();
     });
     // Sin conexión, reintentamos solos cada cierto tiempo
     _reconnectTimer = Timer.periodic(const Duration(seconds: 45), (_) {
@@ -99,6 +102,35 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       final library = Provider.of<LibraryProvider>(context, listen: false);
       if (library.isOffline && !library.isLoading) library.fetchLibrary();
     });
+  }
+
+  /// Notificaciones push del móvil (Android/iOS).
+  void _initPush() {
+    PushNotifications.init(
+      onForeground: (message) {
+        if (!mounted) return;
+        final notifications = Provider.of<NotificationsProvider>(context, listen: false);
+        notifications.fetch();
+        final title = message.notification?.title;
+        if (title == null) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(title),
+            action: SnackBarAction(
+              label: 'Ver',
+              onPressed: () => _openPushTarget(message.data),
+            ),
+          ),
+        );
+      },
+      onOpen: _openPushTarget,
+    );
+  }
+
+  void _openPushTarget(Map<String, dynamic> data) {
+    if (!mounted) return;
+    Provider.of<NotificationsProvider>(context, listen: false).fetch();
+    openNotificationTarget(context, NotificationModel.fromJson(data));
   }
 
   /// Si la app se abrió con un enlace a un libro (/libro/<id>), abre su ficha.

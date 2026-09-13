@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification, NotificationType } from './entities/notification.entity';
 import { User } from '../users/entities/user.entity';
+import { PushService } from './push.service';
 
 interface NotifyOptions {
   actorUserId?: number | null;
@@ -20,7 +21,17 @@ export class NotificationsService {
   constructor(
     @InjectRepository(Notification)
     private readonly notificationsRepo: Repository<Notification>,
+    @InjectRepository(User)
+    private readonly usersRepo: Repository<User>,
+    private readonly pushService: PushService,
   ) {}
+
+  /** Nombre visible de un usuario para los textos de las notificaciones. */
+  async displayName(userId: number): Promise<string> {
+    const user = await this.usersRepo.findOne({ where: { id: userId } }).catch(() => null);
+    const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
+    return name || 'Alguien';
+  }
 
   /** Notifica a varios usuarios excluyendo al propio actor si viene indicado. */
   async notifyUsers(userIds: number[], opts: NotifyOptions) {
@@ -40,6 +51,16 @@ export class NotificationsService {
         } as any) as any as Notification;
         rows.push(await this.notificationsRepo.save(n));
       }
+      // Push al móvil sin bloquear la petición que generó la notificación
+      void this.pushService.sendToUsers(targets, {
+        title: opts.title,
+        body: opts.body,
+        data: {
+          type: opts.type,
+          ...(opts.refType ? { refType: opts.refType } : {}),
+          ...(opts.refId != null ? { refId: String(opts.refId) } : {}),
+        },
+      });
       return rows;
     } catch (e) {
       this.logger.error(`Error creando notificaciones: ${e.message}`);

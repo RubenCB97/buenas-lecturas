@@ -39,6 +39,7 @@ import { ChallengeParticipant } from './challenges/entities/challenge-participan
 import { ChallengeCategory } from './challenges/entities/challenge-category.entity';
 import { ChallengeEntry } from './challenges/entities/challenge-entry.entity';
 import { Notification } from './notifications/entities/notification.entity';
+import { DeviceToken } from './notifications/entities/device-token.entity';
 
 @Module({
   imports: [
@@ -60,7 +61,7 @@ import { Notification } from './notifications/entities/notification.entity';
           ReadingGroup, GroupMember, GroupBook, GroupMessage,
           Quote, Recommendation, ActivityLike, ActivityComment, CustomShelf,
           ReadingChallenge, ChallengeParticipant, ChallengeCategory, ChallengeEntry,
-          Notification,
+          Notification, DeviceToken,
         ],
         synchronize: true, // ¡Solo para desarrollo!
       }),

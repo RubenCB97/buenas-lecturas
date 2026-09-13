@@ -69,24 +69,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  void _navigateForNotification(NotificationModel n) {
-    if (n.refType == 'challenge' && n.refId != null) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => ChallengeDetailScreen(challengeId: n.refId!)));
-      return;
-    }
-    if (n.refType == 'group' && n.refId != null) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => GroupDetailScreen(groupId: n.refId!)));
-      return;
-    }
-    if (n.type == AppNotificationType.friendRequest || n.type == AppNotificationType.friendAccepted) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsScreen()));
-      return;
-    }
-    if (n.type == AppNotificationType.recommendationReceived) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const RecommendationsScreen()));
-      return;
-    }
-  }
+  void _navigateForNotification(NotificationModel n) => openNotificationTarget(context, n);
 
   @override
   Widget build(BuildContext context) {
@@ -190,4 +173,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
     );
   }
+}
+
+/// Abre la pantalla relacionada con una notificación (también desde un push).
+void openNotificationTarget(BuildContext context, NotificationModel n) {
+  if (n.refType == 'challenge' && n.refId != null) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => ChallengeDetailScreen(challengeId: n.refId!)));
+    return;
+  }
+  if (n.refType == 'group' && n.refId != null) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => GroupDetailScreen(groupId: n.refId!)));
+    return;
+  }
+  if (n.type == AppNotificationType.friendRequest || n.type == AppNotificationType.friendAccepted) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsScreen()));
+    return;
+  }
+  if (n.type == AppNotificationType.recommendationReceived) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const RecommendationsScreen()));
+    return;
+  }
+  Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
 }

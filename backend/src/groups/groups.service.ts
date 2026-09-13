@@ -9,6 +9,8 @@ import { User } from '../users/entities/user.entity';
 import { Book } from '../books/entities/book.entity';
 import { UserBook } from '../user-books/entities/user-book.entity';
 import { BooksService } from '../books/books.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class GroupsService {
@@ -24,6 +26,7 @@ export class GroupsService {
     @InjectRepository(UserBook)
     private userBooksRepo: Repository<UserBook>,
     private booksService: BooksService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async createGroup(ownerId: number, data: { name: string; description?: string; coverColor?: string; isPrivate?: boolean }) {
@@ -171,7 +174,30 @@ export class GroupsService {
       book: bookId ? ({ id: bookId } as Book) : undefined,
       chapterNumber: chapterNumber ?? undefined,
     } as any);
-    return this.messagesRepo.save(msg);
+    const saved = await this.messagesRepo.save(msg);
+    void this.notifyGroupMessage(userId, groupId, content);
+    return saved;
+  }
+
+  private async notifyGroupMessage(authorId: number, groupId: number, content: string) {
+    try {
+      const [group, members, name] = await Promise.all([
+        this.groupsRepo.findOne({ where: { id: groupId } }),
+        this.membersRepo.find({ where: { group: { id: groupId } } }),
+        this.notificationsService.displayName(authorId),
+      ]);
+      const text = content.trim();
+      await this.notificationsService.notifyUsers(members.map((m) => m.user.id), {
+        actorUserId: authorId,
+        type: NotificationType.GROUP_MESSAGE,
+        title: `${name} en ${group?.name ?? 'tu club'}`,
+        body: text.length > 140 ? `${text.slice(0, 137)}…` : text,
+        refType: 'group',
+        refId: groupId,
+      });
+    } catch {
+      // Una notificación fallida no debe afectar al mensaje ya publicado
+    }
   }
 
   async listMessages(userId: number, groupId: number, bookId?: number, chapter?: number, limit = 100) {

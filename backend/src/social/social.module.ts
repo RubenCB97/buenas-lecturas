@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Quote } from './entities/quote.entity';
 import { Recommendation } from './entities/recommendation.entity';
@@ -17,6 +18,7 @@ import { FriendsModule } from '../friends/friends.module';
     TypeOrmModule.forFeature([Quote, Recommendation, ActivityLike, ActivityComment, CustomShelf, Activity, UserBook]),
     BooksModule,
     FriendsModule,
+    NotificationsModule,
   ],
   providers: [SocialService],
   controllers: [SocialController],

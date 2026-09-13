@@ -1,0 +1,9 @@
+{
+  "FIREBASE_API_KEY": "",
+  "FIREBASE_PROJECT_ID": "",
+  "FIREBASE_SENDER_ID": "",
+  "FIREBASE_ANDROID_APP_ID": "",
+  "FIREBASE_IOS_APP_ID": "",
+  "FIREBASE_IOS_BUNDLE_ID": "com.buenaslecturas.buenasLecturasApp",
+  "API_URL": "https://buenas-lecturas.costacode.es/api"
+}
