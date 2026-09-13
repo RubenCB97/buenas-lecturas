@@ -3,6 +3,15 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 
+/** Lanzamientos recientes y la ventana de meses que se usó para obtenerlos. */
+export interface RecentReleases {
+  books: any[];
+  /** 1 = este mes, 3 = últimos 3 meses, 6 = últimos 6 meses. */
+  windowMonths: number;
+  /** Primer mes incluido, formato "YYYY-MM". */
+  since: string;
+}
+
 @Injectable()
 export class SearchService implements OnModuleInit {
   private readonly logger = new Logger(SearchService.name);
@@ -81,7 +90,8 @@ export class SearchService implements OnModuleInit {
 
     // 2. Fallback de alta disponibilidad con Open Library API
     try {
-      const openLibUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=20`;
+      const openLibQuery = SearchService.toOpenLibraryQuery(query);
+      const openLibUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(openLibQuery)}&limit=20`;
       const res = await fetch(openLibUrl, {
         headers: {
           'User-Agent': 'BuenasLecturas/1.0 (contacto@buenaslecturas.app)',
@@ -121,6 +131,90 @@ export class SearchService implements OnModuleInit {
     }
 
     return [];
+  }
+
+  /**
+   * Traduce la sintaxis de búsqueda de Google Books a la de Open Library.
+   *
+   * El fallback a Open Library recibía tal cual consultas como
+   * `inauthor:"Frank Herbert"`, que Open Library no entiende y devuelven 0
+   * resultados; así, cuando Google Books daba 503, autores, sagas y
+   * recomendaciones se quedaban vacíos.
+   */
+  static toOpenLibraryQuery(query: string): string {
+    return query
+      .replace(/\binauthor:/gi, 'author:')
+      .replace(/\bintitle:/gi, 'title:')
+      .replace(/\bisbn:/gi, 'isbn:')
+      .replace(/\binpublisher:/gi, 'publisher:')
+      .replace(/\+/g, ' ');
+  }
+
+  /**
+   * Temas de Open Library de una obra, buscándola por título y autor.
+   * Sirve para recomendar parecidos a libros que no traen categoría.
+   */
+  async findSubjectsFor(title: string, author?: string): Promise<string[]> {
+    if (!title?.trim()) return [];
+    let q = `title:"${title.trim()}"`;
+    if (author?.trim()) q += ` author:"${author.trim()}"`;
+    const data = await this.fetchOpenLibrary(
+      `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=3&fields=key,title,subject`,
+    );
+
+    const titleWords = title
+      .toLowerCase()
+      .split(/[^a-záéíóúñü0-9]+/)
+      .filter(w => w.length > 3);
+    const genre = /fiction|ficci|fantas|romance|romant|thriller|mystery|misterio|horror|terror|histor|poet|poes|biograf|memoir|crime|crimen|detective|adventure|aventura|dystop|distop|suspense|humor|drama|novel/i;
+
+    // puntuación = veces que aparece + bonus si es un género
+    const scores = new Map<string, { label: string; score: number }>();
+    for (const doc of data?.docs ?? []) {
+      for (const subj of (doc.subject ?? []).slice(0, 20)) {
+        const label = String(subj).trim();
+        const lower = label.toLowerCase();
+        if (!label || label.length > 40) continue;
+        // Etiquetas internas (nyt:..., award:...) y genéricas que no ayudan
+        if (/[:=]/.test(label)) continue;
+        if (/accessible book|protected daisy|in library|large type|open library|bestseller|reviewed|translations/i.test(label)) continue;
+        // Lugares y personajes ficticios: apuntan a la propia saga
+        if (/\((imaginary|fictitious)/i.test(label)) continue;
+        // Temas que contienen el título (p. ej. "Dune (Imaginary place)")
+        if (titleWords.some(w => lower.includes(w))) continue;
+        if (/^(fiction|ficción|literature|literatura)$/i.test(label)) continue;
+
+        const key = lower.replace(/[-\s]+/g, ' ');
+        const entry = scores.get(key) ?? { label, score: 0 };
+        entry.score += 1 + (genre.test(label) ? 2 : 0);
+        scores.set(key, entry);
+      }
+    }
+    return [...scores.values()].sort((a, b) => b.score - a.score).map(e => e.label).slice(0, 3);
+  }
+
+  /** Obras más leídas de un tema en Open Library. */
+  async findPopularBySubject(subject: string, limit = 20): Promise<any[]> {
+    if (!subject?.trim()) return [];
+    const fields =
+      'key,title,subtitle,author_name,cover_i,first_publish_year,ratings_average,ratings_count,' +
+      'number_of_pages_median,subject,publisher,language,isbn,readinglog_count';
+    // `subject_key` busca el tema exacto. Con `subject:"…"` Open Library hace
+    // una coincidencia difusa y para "Science fiction" devolvía Crepúsculo o
+    // Harry Potter, que solo comparten la palabra "fiction".
+    const key = subject
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_|_$/g, '');
+    if (!key) return [];
+    const data = await this.fetchOpenLibrary(
+      `https://openlibrary.org/search.json?q=subject_key%3A${encodeURIComponent(key)}` +
+        `&sort=readinglog&limit=${limit}&fields=${fields}`,
+    );
+    return (data?.docs ?? []).map((d: any) => this.mapOpenLibraryDoc(d));
   }
 
   /**
@@ -287,6 +381,8 @@ export class SearchService implements OnModuleInit {
     const warm = () => {
       void this.refreshTrending('ES', 'weekly');
       void this.refreshTrending('GLOBAL', 'weekly');
+      void this.refreshRecent('ES');
+      void this.refreshRecent('GLOBAL');
     };
     warm();
     const timer = setInterval(warm, SearchService.TRENDING_TTL_MS);
@@ -479,6 +575,155 @@ export class SearchService implements OnModuleInit {
       if (filtered.length >= 3) return filtered.slice(0, 15);
     }
     return [];
+  }
+
+  // ---------------------------------------------------------------------------
+  // Lanzamientos recientes (pestaña Descubrir)
+  // ---------------------------------------------------------------------------
+
+  private static readonly RECENT_TTL_MS = 6 * 60 * 60 * 1000;
+  private readonly recentCache = new Map<string, { value: RecentReleases; fetchedAt: number }>();
+  private readonly recentInFlight = new Map<string, Promise<RecentReleases>>();
+
+  private static readonly MONTHS: Record<string, number> = {
+    january: 1, february: 2, march: 3, april: 4, may: 5, june: 6, july: 7, august: 8,
+    september: 9, october: 10, november: 11, december: 12,
+    jan: 1, feb: 2, mar: 3, apr: 4, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12,
+    enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6, julio: 7, agosto: 8,
+    septiembre: 9, setiembre: 9, octubre: 10, noviembre: 11, diciembre: 12,
+  };
+
+  /**
+   * Meses (formato año*12+mes) en los que Open Library dice que se publicó
+   * alguna edición. Las fechas llegan en formatos muy variados:
+   * "2026-09-03", "September 8, 2026", "03 September 2026", "13 Oct 2026".
+   */
+  static parsePublishMonths(publishDates: unknown): Set<number> {
+    const out = new Set<number>();
+    if (!Array.isArray(publishDates)) return out;
+    for (const raw of publishDates) {
+      if (typeof raw !== 'string') continue;
+      const s = raw.toLowerCase();
+      const iso = s.match(/\b(\d{4})-(\d{1,2})\b/);
+      if (iso) {
+        const m = +iso[2];
+        if (m >= 1 && m <= 12) out.add(+iso[1] * 12 + m);
+        continue;
+      }
+      const year = s.match(/\b(\d{4})\b/);
+      if (!year) continue;
+      for (const word of s.match(/[a-záéíóú]+/g) ?? []) {
+        const m = SearchService.MONTHS[word];
+        if (m) {
+          out.add(+year[1] * 12 + m);
+          break;
+        }
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Libros publicados recientemente, ordenados por lectores.
+   *
+   * Open Library cataloga con retraso lo más reciente (de los 1.000 libros de
+   * 2026 más leídos, a mediados de septiembre solo 3 eran de ese mes), y Google
+   * Books tampoco sirve (`orderBy=newest` devuelve obras de hace 20 años). Por
+   * eso probamos ventanas crecientes —este mes, 3 meses, 6 meses— y devolvemos
+   * la primera con suficiente material, indicando cuál se usó para que la app
+   * titule la sección con honestidad.
+   */
+  async findRecentReleases(region: 'ES' | 'GLOBAL' = 'GLOBAL'): Promise<RecentReleases> {
+    const key = `recent:${region}`;
+    const cached = this.recentCache.get(key);
+    if (cached) {
+      if (Date.now() - cached.fetchedAt > SearchService.RECENT_TTL_MS) void this.refreshRecent(region);
+      return cached.value;
+    }
+    return this.refreshRecent(region);
+  }
+
+  private refreshRecent(region: 'ES' | 'GLOBAL'): Promise<RecentReleases> {
+    const key = `recent:${region}`;
+    const running = this.recentInFlight.get(key);
+    if (running) return running;
+
+    const task = this.computeRecentReleases(region)
+      .then(value => {
+        if (value.books.length > 0 || !this.recentCache.has(key)) {
+          this.recentCache.set(key, { value, fetchedAt: Date.now() });
+        }
+        return value.books.length > 0 ? value : (this.recentCache.get(key)?.value ?? value);
+      })
+      .catch(e => {
+        this.logger.warn(`Error calculando lanzamientos recientes ${key}: ${e.message}`);
+        return this.recentCache.get(key)?.value ?? { books: [], windowMonths: 0, since: '' };
+      })
+      .finally(() => this.recentInFlight.delete(key));
+
+    this.recentInFlight.set(key, task);
+    return task;
+  }
+
+  private async computeRecentReleases(region: 'ES' | 'GLOBAL'): Promise<RecentReleases> {
+    const now = new Date();
+    const current = now.getFullYear() * 12 + (now.getMonth() + 1);
+    const windows = [1, 3, 6];
+    const minBooks = 8;
+    const limit = 24;
+
+    // Años que cubre la ventana más amplia (en enero-junio incluye el anterior)
+    const oldest = current - (windows[windows.length - 1] - 1);
+    const years = new Set([Math.floor((oldest - 1) / 12), Math.floor((current - 1) / 12)]);
+
+    const fields =
+      'key,title,subtitle,author_name,cover_i,first_publish_year,ratings_average,ratings_count,' +
+      'number_of_pages_median,subject,publisher,language,isbn,readinglog_count,want_to_read_count,publish_date';
+
+    const responses = await Promise.all(
+      [...years].map(y => {
+        let q = `first_publish_year%3A${y}`;
+        if (region === 'ES') q += '+AND+language%3Aspa';
+        return this.fetchOpenLibrary(
+          `https://openlibrary.org/search.json?q=${q}&sort=readinglog&limit=1000&fields=${fields}`,
+        );
+      }),
+    );
+
+    // Cada libro con el mes más reciente en que se publicó (dentro de lo actual)
+    const candidates: { doc: any; month: number }[] = [];
+    const seen = new Set<string>();
+    for (const data of responses) {
+      for (const doc of data?.docs ?? []) {
+        const months = [...SearchService.parsePublishMonths(doc.publish_date)].filter(m => m <= current);
+        if (months.length === 0) continue;
+        const key = (doc.key ?? doc.title ?? '').toString();
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        candidates.push({ doc, month: Math.max(...months) });
+      }
+    }
+
+    const toResult = (windowMonths: number): RecentReleases => {
+      const from = current - (windowMonths - 1);
+      const books = candidates
+        .filter(c => c.month >= from)
+        // Priorizamos los que tienen portada y luego por lectores
+        .sort((a, b) =>
+          Number(!!b.doc.cover_i) - Number(!!a.doc.cover_i) ||
+          (b.doc.readinglog_count ?? 0) - (a.doc.readinglog_count ?? 0))
+        .slice(0, limit)
+        .map(c => this.mapOpenLibraryDoc(c.doc));
+      const fromYear = Math.floor((from - 1) / 12);
+      const fromMonth = from - fromYear * 12;
+      return { books, windowMonths, since: `${fromYear}-${String(fromMonth).padStart(2, '0')}` };
+    };
+
+    for (const w of windows) {
+      const result = toResult(w);
+      if (result.books.length >= minBooks) return result;
+    }
+    return toResult(windows[windows.length - 1]);
   }
 
   // Libros similares por categoría o autor, evitando el libro original

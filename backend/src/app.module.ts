@@ -16,6 +16,7 @@ import { SocialModule } from './social/social.module';
 import { ChallengesModule } from './challenges/challenges.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AuthorsModule } from './authors/authors.module';
+import { DiscoverModule } from './discover/discover.module';
 
 import { UserBook } from './user-books/entities/user-book.entity';
 import { DetailController } from './detail/detail.controller';
@@ -77,6 +78,7 @@ import { Notification } from './notifications/entities/notification.entity';
     ChallengesModule,
     NotificationsModule,
     AuthorsModule,
+    DiscoverModule,
   ],
   controllers: [DetailController],
   providers: [DetailService],

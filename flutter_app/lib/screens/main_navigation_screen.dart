@@ -6,6 +6,7 @@ import '../providers/library_provider.dart';
 import '../providers/notifications_provider.dart';
 import '../providers/social_provider.dart';
 import 'challenges/challenges_screen.dart';
+import 'discover/discover_screen.dart';
 import 'explore/explore_screen.dart';
 import 'friends/friends_screen.dart';
 import 'groups/groups_screen.dart';
@@ -29,6 +30,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   final List<Widget> _screens = const [
     ExploreScreen(),
+    DiscoverScreen(),
     LibraryScreen(),
     _CommunityHub(),
     ProfileScreen(),
@@ -78,6 +80,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               icon: Icon(Icons.explore_outlined),
               activeIcon: Icon(Icons.explore_rounded),
               label: 'Explorar',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.auto_awesome_outlined),
+              activeIcon: Icon(Icons.auto_awesome),
+              label: 'Descubrir',
             ),
             BottomNavigationBarItem(
               icon: Stack(

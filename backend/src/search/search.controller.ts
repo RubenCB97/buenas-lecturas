@@ -22,6 +22,15 @@ export class SearchController {
   }
 
   /**
+   * Lanzamientos recientes: este mes, o los últimos 3/6 meses si aún hay pocos
+   * catalogados. `windowMonths` indica qué ventana se usó.
+   */
+  @Get('recent-releases')
+  async recentReleases(@Query('region') region?: string) {
+    return this.searchService.findRecentReleases((region ?? '').toUpperCase() === 'ES' ? 'ES' : 'GLOBAL');
+  }
+
+  /**
    * Novedades de un año, paginadas.
    * region: ES (ediciones en español) | GLOBAL
    * sort:   readinglog (más leídos) | new (más recientes)

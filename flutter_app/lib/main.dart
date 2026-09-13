@@ -6,6 +6,7 @@ import 'providers/auth_provider.dart';
 import 'providers/authors_provider.dart';
 import 'providers/book_detail_provider.dart';
 import 'providers/challenges_provider.dart';
+import 'providers/discover_provider.dart';
 import 'providers/explore_provider.dart';
 import 'providers/friends_provider.dart';
 import 'providers/groups_provider.dart';
@@ -48,6 +49,7 @@ class BuenasLecturasApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthorsProvider()),
         ChangeNotifierProvider(create: (_) => NewReleasesProvider()),
+        ChangeNotifierProvider(create: (_) => DiscoverProvider()),
       ],
       child: Consumer2<AuthProvider, ThemeProvider>(
         builder: (context, authProvider, themeProvider, _) {
